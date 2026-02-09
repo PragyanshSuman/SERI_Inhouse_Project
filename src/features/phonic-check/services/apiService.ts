@@ -8,17 +8,8 @@ import Constants from 'expo-constants';
 // - On Physical Device, this is the LAN IP of your PC (e.g., 192.168.1.5).
 // - Constants.expoConfig.hostUri gives "IP:PORT" (e.g., "192.168.1.5:8081")
 const getApiUrl = () => {
-    const debuggerHost = Constants.expoConfig?.hostUri;
-    const localhost = 'http://10.0.2.2:8000';
-
-    if (!debuggerHost) {
-        // Fallback for production or if dev client isn't providing it
-        return localhost;
-    }
-
-    // Extract IP from "IP:PORT"
-    const ip = debuggerHost.split(':')[0];
-    return `http://${ip}:8000`;
+    // When using `adb reverse tcp:8000 tcp:8000`, the device can access the PC's localhost:8000 directly.
+    return 'http://localhost:8000';
 };
 
 const API_URL = getApiUrl();

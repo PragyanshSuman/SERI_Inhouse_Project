@@ -23,7 +23,9 @@ import { colors, fonts } from '../theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { AudioRecorder } from '../services/audioRecorder';
 import { checkPronunciation } from '../services/apiService';
-import FeatureTour from '../components/FeatureTour';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import { useLanguage } from '../../../context/SettingsContext';
+import { getTranslation } from '../../../utils/Translations';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +34,7 @@ type HomeScreenProps = {
 };
 
 const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const { language } = useLanguage();
   // Logic from Studio
   const [word, setWord] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -46,23 +49,23 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
   
   const tourSteps = [
       {
-          title: "Welcome to Magic Check! ✨",
-          description: "This tool helps you practice your pronunciation. Let's see how it works!",
+          title: getTranslation(language, 'magic_tour_welcome_title'),
+          description: getTranslation(language, 'magic_tour_welcome_desc'),
           position: 'center' as const,
       },
       {
-          title: "Step 1: Type a Word ✍️",
-          description: "Enter any word you want to practice in the box above.",
+          title: getTranslation(language, 'magic_tour_step1_title'),
+          description: getTranslation(language, 'magic_tour_step1_desc'),
           position: 'top' as const,
       },
       {
-          title: "Step 2: Record 🎤",
-          description: "Tap the microphone button and say the word clearly.",
+          title: getTranslation(language, 'magic_tour_step2_title'),
+          description: getTranslation(language, 'magic_tour_step2_desc'),
           position: 'bottom' as const,
       },
       {
-          title: "Get Feedback 🌟",
-          description: "We'll analyze your speech and show you exactly which sounds you got right!",
+          title: getTranslation(language, 'magic_tour_feedback_title'),
+          description: getTranslation(language, 'magic_tour_feedback_desc'),
           position: 'center' as const,
       }
   ];
@@ -156,8 +159,8 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
       <View style={styles.headerContainer}>
-        <Text style={styles.title}>Magic Check</Text>
-        <Text style={styles.subtitle}>Speak a word to check your pronunciation!</Text>
+        <Text style={styles.title}>{getTranslation(language, 'magic_check_title')}</Text>
+        <Text style={styles.subtitle}>{getTranslation(language, 'magic_check_subtitle')}</Text>
       </View>
 
       <KeyboardAvoidingView 
@@ -169,7 +172,7 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
               {/* Magic Check Section */}
               <View style={styles.card}>
                   <Text style={styles.instruction}>
-                    {word ? "2. Tap the mic below!" : "1. Type a word to check:"}
+                    {word ? getTranslation(language, 'magic_instruction_tap') : getTranslation(language, 'magic_instruction_type')}
                   </Text>
                   
                   <View style={styles.inputContainer}>
@@ -177,7 +180,7 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
                       style={styles.input}
                       value={word}
                       onChangeText={setWord}
-                      placeholder="e.g. Magic"
+                      placeholder={getTranslation(language, 'magic_input_placeholder')}
                       placeholderTextColor="#94A3B8"
                       editable={!isRecording && !isProcessing}
                   />
@@ -213,10 +216,10 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
                   
                   <Text style={styles.statusText}>
                       {isProcessing 
-                          ? 'Analyzing magic...' 
+                          ? getTranslation(language, 'magic_analyzing') 
                           : isRecording 
-                          ? 'Listening...' 
-                          : 'Tap microphone to record'}
+                          ? getTranslation(language, 'magic_mic_listening')
+                          : getTranslation(language, 'magic_mic_tap')}
                   </Text>
               </View>
 

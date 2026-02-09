@@ -18,7 +18,9 @@ import { LETTER_PATHS } from '../constants/LetterPaths';
 import { LetterPath } from '../models/TracingData';
 import StorageService from '../services/StorageService';
 import { Dimensions } from 'react-native';
-import FeatureTour from '../components/FeatureTour';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import { useLanguage } from '../../../context/SettingsContext';
+import { getTranslation } from '../../../utils/Translations';
 
 
 
@@ -46,6 +48,7 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
   onComplete,
   onExit,
 }) => {
+  const { language } = useLanguage();
   const letterPath: LetterPath = LETTER_PATHS[letter.toUpperCase()];
   
   const [showInstructions, setShowInstructions] = useState(true);
@@ -241,7 +244,7 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
       {/* Instructions Screen */}
       {showInstructions && (
         <View style={styles.instructionsContainer}>
-           <Text style={styles.instructionTitle}>Let's learn</Text>
+           <Text style={styles.instructionTitle}>{getTranslation(language, 'trace_lets_learn')}</Text>
            <Text style={styles.mainLetterTitle}>{letter}</Text>
            
            <View style={styles.audioSection}>
@@ -250,14 +253,14 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
                onPlayStart={handleAudioPlay}
                size={120}
              />
-             <Text style={styles.instructionText}>Tap to listen</Text>
+             <Text style={styles.instructionText}>{getTranslation(language, 'trace_tap_listen')}</Text>
            </View>
 
           <TouchableOpacity
             style={styles.startButton}
             onPress={handleStartTracing}
           >
-            <Text style={styles.startButtonText}>START</Text>
+            <Text style={styles.startButtonText}>{getTranslation(language, 'trace_start_btn')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -267,9 +270,9 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
         <View style={styles.tracingContainer}>
           <View style={styles.topSection}>
             <Text style={styles.tracePrompt}>
-                {activeStrokeIndex === 0 ? "Start at the green dot!" :
-                 activeStrokeIndex === letterPath.strokes.length - 1 ? "Almost done!" :
-                 `Stroke ${activeStrokeIndex + 1}`}
+                {activeStrokeIndex === 0 ? getTranslation(language, 'trace_start_green') :
+                 activeStrokeIndex === letterPath.strokes.length - 1 ? getTranslation(language, 'trace_almost_done') :
+                 `${getTranslation(language, 'trace_stroke')} ${activeStrokeIndex + 1}`}
             </Text>
             <View style={styles.soundButtonRow}>
                 <Text style={styles.targetLetterSmall}>{letter}</Text>
@@ -314,7 +317,7 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
               {isCompleting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.primaryButtonText}>CHECK</Text>
+                <Text style={styles.primaryButtonText}>{getTranslation(language, 'trace_check_btn')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -325,11 +328,11 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
       {showResults && sessionAnalytics && (
         <ScrollView style={styles.resultsContainer}>
           <View style={styles.resultsHeader}>
-            <Text style={styles.resultsTitle}>Lesson Complete!</Text>
+            <Text style={styles.resultsTitle}>{getTranslation(language, 'lesson_complete')}</Text>
             <LetterDisplay letter={letter} size={100} color="#fff" />
             <View style={styles.resultStatsRow}>
                  <View style={styles.statBox}>
-                    <Text style={styles.statLabel}>TIME</Text>
+                    <Text style={styles.statLabel}>{getTranslation(language, 'time')}</Text>
                     <Text style={[styles.statValue, { color: '#2196F3' }]}>
                         {(sessionAnalytics.overview.completionTime / 1000).toFixed(1)}s
                     </Text>
@@ -338,17 +341,17 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
           </View>
 
           <View style={styles.detailedMetrics}>
-            <Text style={styles.sectionTitle}>Analytics Report</Text>
-            <Text style={styles.reportSubtitle}>Data saved to device for study</Text>
+            <Text style={styles.sectionTitle}>{getTranslation(language, 'analytics_report')}</Text>
+            <Text style={styles.reportSubtitle}>{getTranslation(language, 'data_saved')}</Text>
             
             {/* 1. Structural Analysis */}
-            <Text style={styles.subHeader}>📐 Shape & Structure</Text>
+            <Text style={styles.subHeader}>{getTranslation(language, 'shape_structure')}</Text>
             <DetailRow label="Aspect Ratio" value={sessionAnalytics.clinical.shape?.aspect_ratio?.toFixed(2) ?? '-'} />
             <DetailRow label="Compactness" value={sessionAnalytics.clinical.shape?.compactness_score?.toFixed(2) ?? '-'} />
             <DetailRow label="Closure Rate" value={`${((sessionAnalytics.clinical.shape?.closure_success_rate ?? 0) * 100).toFixed(0)}%`} />
             
             {/* 2. Kinematics & Fluency */}
-            <Text style={styles.subHeader}>⚡ Speed & Fluency</Text>
+            <Text style={styles.subHeader}>{getTranslation(language, 'speed_fluency')}</Text>
             <DetailRow label="Avg Velocity" value={`${(sessionAnalytics.clinical.kinematics.avgVelocity ?? 0).toFixed(1)} px/ms`} />
             <DetailRow label="Peak Velocity" value={`${(sessionAnalytics.clinical.kinematics.peakVelocity ?? 0).toFixed(1)} px/ms`} />
             <DetailRow label="Velocity CoV" value={`${(sessionAnalytics.clinical.kinematics.velocityCoV ?? 0).toFixed(2)}`} />
@@ -359,7 +362,7 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
             <DetailRow label="Sampling Rate" value={`${(sessionAnalytics.clinical.dataQuality.samplingRate ?? 0).toFixed(0)} Hz`} />
 
             {/* 3. Motor Control & Dynamics */}
-            <Text style={styles.subHeader}>🧠 Motor & Dynamics</Text>
+            <Text style={styles.subHeader}>{getTranslation(language, 'motor_dynamics')}</Text>
             <DetailRow label="Tremor Power" value={`${sessionAnalytics.clinical.graphomotor.tremorPower?.toFixed(2) ?? '0.00'}`} />
             <DetailRow label="Tremor Freq" value={`${sessionAnalytics.clinical.graphomotor.tremorFrequency?.toFixed(1) ?? '0'} Hz`} />
             <DetailRow label="Tremor Amp" value={`${sessionAnalytics.clinical.graphomotor.tremorAmplitude?.toFixed(2) ?? '0'} px`} />
@@ -370,7 +373,7 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
             <DetailRow label="Ballistic Strokes" value={`${sessionAnalytics.clinical.dynamics.ballisticMovements}`} />
 
             {/* 4. Temporal & Sequencing */}
-            <Text style={styles.subHeader}>⏱️ Temporal & Sequencing</Text>
+            <Text style={styles.subHeader}>{getTranslation(language, 'temporal_sequencing')}</Text>
             <DetailRow label="Time in Motion" value={`${(sessionAnalytics.clinical.kinematics.timeInMotion / 1000).toFixed(1)}s`} />
             <DetailRow label="Paused Time" value={`${(sessionAnalytics.clinical.kinematics.timePaused / 1000).toFixed(1)}s`} />
             <DetailRow label="Fluency Ratio" value={`${(sessionAnalytics.clinical.kinematics.fluencyRatio * 100).toFixed(0)}%`} />
@@ -384,9 +387,9 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
           {/* ML Analysis Section */}
           {sessionAnalytics.ml && (
             <View style={styles.detailedMetrics}>
-              <Text style={styles.sectionTitle}>🤖 ML Analysis</Text>
+              <Text style={styles.sectionTitle}>{getTranslation(language, 'ml_analysis')}</Text>
               <Text style={styles.reportSubtitle}>
-                AI-powered character recognition
+                {getTranslation(language, 'ai_recognition')}
               </Text>
               
               <DetailRow
@@ -407,11 +410,11 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
                 <View style={styles.warningBox}>
                   <Text style={styles.warningIcon}>⚠️</Text>
                   <View style={styles.warningContent}>
-                    <Text style={styles.warningTitle}>Reversal Detected</Text>
+                    <Text style={styles.warningTitle}>{getTranslation(language, 'reversal_detected')}</Text>
                     <Text style={styles.warningText}>
-                      {sessionAnalytics.ml.reversalType === 'horizontal_flip' && 'Character written backward (mirrored)'}
-                      {sessionAnalytics.ml.reversalType === 'vertical_flip' && 'Character written upside down'}
-                      {sessionAnalytics.ml.reversalType === 'rotation_180' && 'Character rotated 180°'}
+                      {sessionAnalytics.ml.reversalType === 'horizontal_flip' && getTranslation(language, 'reversal_backward')}
+                      {sessionAnalytics.ml.reversalType === 'vertical_flip' && getTranslation(language, 'reversal_upside_down')}
+                      {sessionAnalytics.ml.reversalType === 'rotation_180' && getTranslation(language, 'reversal_rotated')}
                     </Text>
                     {sessionAnalytics.ml.reversalConfidence && (
                       <Text style={styles.warningSubtext}>
@@ -425,7 +428,7 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
               {/* Top Predictions */}
               {sessionAnalytics.ml.topPredictions && sessionAnalytics.ml.topPredictions.length > 1 && (
                 <View style={styles.topPredictionsContainer}>
-                  <Text style={styles.topPredictionsTitle}>Top Predictions:</Text>
+                  <Text style={styles.topPredictionsTitle}>{getTranslation(language, 'top_predictions')}</Text>
                   {sessionAnalytics.ml.topPredictions.slice(0, 3).map((pred, idx) => (
                     <View key={idx} style={styles.predictionRow}>
                       <Text style={styles.predictionChar}>{idx + 1}. {pred.char}</Text>
@@ -452,14 +455,14 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
               style={styles.startButton}
               onPress={handleExit}
             >
-              <Text style={styles.startButtonText}>CONTINUE</Text>
+              <Text style={styles.startButtonText}>{getTranslation(language, 'trace_continue_btn')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
               style={styles.secondaryButton}
               onPress={handleRetry}
             >
-              <Text style={styles.secondaryButtonText}>PRACTICE AGAIN</Text>
+              <Text style={styles.secondaryButtonText}>{getTranslation(language, 'trace_practice_again')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -470,29 +473,29 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
         visible={introTourVisible}
         steps={[
             {
-                title: `Learning Letter ${letter} 🅰️`,
-                description: `We are going to draw the letter ${letter}.`,
+                title: `${getTranslation(language, 'tour_learning_letter_title')} ${letter} 🅰️`,
+                description: `${getTranslation(language, 'tour_learning_letter_desc')} ${letter}.`,
                 style: { top: '12%', alignSelf: 'center' }, // Moved very high to avoid letter
                 arrowPosition: 'bottom', // Point down to the letter
                 arrowOffset: 92,
             },
             {
-                title: "Hear Sound 🔊",
-                description: "Tap for sound.",
+                title: getTranslation(language, 'tour_hear_sound_title'),
+                description: getTranslation(language, 'tour_hear_sound_desc_short'),
                 style: { top: '57%', left: '57%' }, // To the right of the center speaker
                 arrowPosition: 'left',
                 arrowOffset: 25, 
             },
             {
-                title: "Watch Demo 👁️",
-                description: "Tap eye to watch.",
+                title: getTranslation(language, 'tour_watch_demo_title'),
+                description: getTranslation(language, 'tour_watch_demo_desc'),
                 style: { top: 70, right: 10 }, 
                 arrowPosition: 'top', // Point UP to the eye button
                 arrowOffset: 110, // Pushed further right to align with corner icon
             },
             {
-                title: "Start Writing 🚀",
-                description: "Tap START to begin!",
+                title: getTranslation(language, 'tour_start_writing_title'),
+                description: getTranslation(language, 'tour_start_writing_desc'),
                 style: { bottom: 150, alignSelf: 'center' }, // Kept top as it's safe
                 arrowPosition: 'bottom',
                 arrowOffset: 92,
@@ -507,29 +510,29 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
         visible={tracingTourVisible}
         steps={[
             {
-                title: "Hear Sound 🔊",
-                description: "Tap here to hear the letter sound.",
+                title: getTranslation(language, 'tour_hear_sound_title'),
+                description: getTranslation(language, 'tour_hear_sound_desc_long'),
                 style: { top: 140, right: 20 },
                 arrowPosition: 'top',
                 arrowOffset: 160, // Align with top-right eye icon
             },
             {
-                title: "Watch Tutorial 👁️",
-                description: "Tap here to watch how to write.",
+                title: getTranslation(language, 'tour_watch_tutorial_title'),
+                description: getTranslation(language, 'tour_watch_tutorial_desc'),
                 style: { top: 75, left: 45 },
                 arrowPosition: 'top', 
                 arrowOffset: 20, // Align with top-left speaker (if present there, checking header layout)
             },
             {
-                title: "Trace Here ✍️",
-                description: "Trace the letter on the screen.",
+                title: getTranslation(language, 'tour_trace_here_title'),
+                description: getTranslation(language, 'tour_trace_here_desc'),
                 style: { top: '30%', alignSelf: 'center' },
                 arrowPosition: 'bottom',
                 arrowOffset: 92,
             },
             {
-                title: "Check Work ✅", 
-                description: "Tap CHECK when you are done.",
+                title: getTranslation(language, 'tour_check_work_title'), 
+                description: getTranslation(language, 'tour_check_work_desc'),
                 style: { bottom: 100, alignSelf: 'center' },
                 arrowPosition: 'bottom',
                 arrowOffset: 92,
@@ -554,7 +557,7 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
                       <Text style={styles.closeDemoText}>✕</Text>
                   </TouchableOpacity>
                   
-                  <Text style={styles.demoTitle}>Watch how to write '{letter}'</Text>
+                  <Text style={styles.demoTitle}>{getTranslation(language, 'watch_how_to_write')} '{letter}'</Text>
                   
                   <View style={styles.demoCanvasContainer}>
                       <TracingCanvas

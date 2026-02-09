@@ -16,6 +16,14 @@ import ProgressScreen from '../features/phonic-check/screens/ProgressScreen';
 import SettingsScreen from '../features/phonic-check/screens/SettingsScreen';
 
 import OriginalAppNavigator from '../features/original-app/navigation/OriginalAppNavigator';
+import VisualDiscriminationDashboard from '../features/visual-discrimination/screens/VisualDiscriminationDashboard';
+import OddOneOutGameScreen from '../features/visual-discrimination/screens/OddOneOutGameScreen';
+import LetterSortingGameScreen from '../features/visual-discrimination/screens/LetterSortingGameScreen';
+import SightWordsDashboard from '../features/sight-words/screens/SightWordsDashboard';
+import WordNinjaGameScreen from '../features/sight-words/screens/WordNinjaGameScreen';
+import RhymeDashboard from '../features/rhyme-time/screens/RhymeDashboard';
+import RhymingMatchGameScreen from '../features/rhyme-time/screens/RhymingMatchGameScreen';
+import { DifficultyLevel } from '../data/sightWords';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -41,6 +49,13 @@ export type RootStackParamList = {
   Progress: undefined; // Keep for now
   Settings: undefined;
   OriginalApp: undefined;
+  VisualDiscriminationDashboard: undefined;
+  OddOneOutGame: { pairId: string };
+  LetterSortingGame: { pairId: string };
+  SightWordsDashboard: undefined;
+  WordNinjaGame: { levelId: DifficultyLevel };
+  RhymeDashboard: undefined;
+  RhymingMatchGame: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -69,6 +84,19 @@ export default function RootNavigator() {
       <Stack.Screen name="Progress" component={ProgressScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="OriginalApp" component={OriginalAppNavigator} />
+      
+      {/* Visual Discrimination Module */}
+      <Stack.Screen name="VisualDiscriminationDashboard" component={VisualDiscriminationDashboard} />
+      <Stack.Screen name="OddOneOutGame" component={OddOneOutGameScreen} />
+      <Stack.Screen name="LetterSortingGame" component={LetterSortingGameScreen} />
+      
+      {/* Sight Words Module */}
+      <Stack.Screen name="SightWordsDashboard" component={SightWordsDashboard} />
+      <Stack.Screen name="WordNinjaGame" component={WordNinjaGameScreen} />
+
+      {/* Rhyme Time Module */}
+      <Stack.Screen name="RhymeDashboard" component={RhymeDashboard} />
+      <Stack.Screen name="RhymingMatchGame" component={RhymingMatchGameScreen} />
     </Stack.Navigator>
   );
 }

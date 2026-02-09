@@ -28,6 +28,8 @@ import { segmentWord } from '../../services/pronunciation/GraphemeMapper';
 import { audioEngine } from '../../services/audio/AudioEngine';
 import { ProcessedPronunciation } from '../../types/pronunciation.types';
 import { styles } from './PronunciationCard.styles';
+import { useLanguage } from '../../../../context/SettingsContext';
+import { getTranslation } from '../../../../utils/Translations';
 
 /**
  * Component props
@@ -68,6 +70,7 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
   onPlayEnd,
   onError,
 }) => {
+  const { language } = useLanguage();
   // Font override style
   const fontStyle = dyslexicMode ? { fontFamily: 'OpenDyslexic-Regular' } : {};
 
@@ -272,7 +275,7 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
       <View style={styles.card}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#1A73E8" />
-          <Text style={styles.loadingText}>Loading pronunciation...</Text>
+          <Text style={styles.loadingText}>{getTranslation(language, 'card_loading')}</Text>
         </View>
       </View>
     );
@@ -287,14 +290,14 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
         <View style={styles.errorContainer}>
           <Text style={styles.wordText}>{word}</Text>
           <Text style={styles.errorText}>
-            {state.error || 'Could not load pronunciation'}
+            {state.error || getTranslation(language, 'card_error')}
           </Text>
           <TouchableOpacity
             onPress={loadPronunciation}
             style={[styles.playButton, { marginTop: 16 }]}
             accessibilityLabel="Retry loading pronunciation"
           >
-            <Text style={styles.playButtonText}>Retry</Text>
+            <Text style={styles.playButtonText}>{getTranslation(language, 'card_retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -365,7 +368,7 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
 
       {/* IPA notation - Dim in Focus Mode */}
       <View style={[styles.phoneticContainer, state.focusMode && { opacity: 0.1 }]}>
-        <Text style={styles.phoneticLabel}>Pronunciation</Text>
+        <Text style={styles.phoneticLabel}>{getTranslation(language, 'card_pronunciation')}</Text>
         <Text
           style={[styles.phoneticText, fontStyle]}
           accessibilityLabel={`Phonetic notation: ${pronunciation.ipaNotation}`}
@@ -423,7 +426,7 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
             <Text style={styles.playButtonText}>▶</Text>
           )}
           <Text style={styles.playButtonText}>
-            {state.isPlaying ? 'Playing...' : 'Play'}
+            {state.isPlaying ? getTranslation(language, 'card_playing') : getTranslation(language, 'card_play')}
           </Text>
         </TouchableOpacity>
 
@@ -460,7 +463,7 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
           accessibilityState={{ checked: state.focusMode }}
         >
           <Text style={[styles.slowToggleText, state.focusMode && { color: '#4A148C' }]}>
-            📏 Focus
+            📏 {getTranslation(language, 'card_focus')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -469,7 +472,7 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
       {showMetadata && !state.focusMode && (
         <View style={styles.metadataContainer}>
           <Text style={styles.metadataText}>
-            Source: {pronunciation.metadata.source === 'dictionary' ? '📖 Dictionary' : '🧠 Rule-based'}
+            {getTranslation(language, 'card_source')} {pronunciation.metadata.source === 'dictionary' ? getTranslation(language, 'card_dictionary') : getTranslation(language, 'card_rule_based')}
           </Text>
           
           <View
@@ -492,7 +495,7 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
                   : {},
               ]}
             >
-              {Math.round(pronunciation.metadata.confidence * 100)}% confident
+              {Math.round(pronunciation.metadata.confidence * 100)}% {getTranslation(language, 'card_confident')}
             </Text>
           </View>
         </View>

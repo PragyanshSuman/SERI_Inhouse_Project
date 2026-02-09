@@ -29,7 +29,7 @@ import { NativeRecognizer } from '../utils/NativeRecognizer';
 import DebugInspector from '../components/DebugInspector';
 import { FeedbackGenerator } from '../utils/feedbackGenerator';
 
-import FeatureTour from '../components/FeatureTour';
+import FeatureTour from '../../../components/FeatureTour';
 
 // Components
 import WordDisplay from '../components/WordDisplay';

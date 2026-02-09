@@ -23,9 +23,13 @@ import {
   LayoutAnimation,
   UIManager,
   PermissionsAndroid,
+  Dimensions, // Add Dimensions
 } from 'react-native';
 import { PronunciationCard } from '../components/pronunciation/PronunciationCard';
-// import Voice from '@react-native-voice/voice';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour'; // Import shared tour
+import { useLanguage } from '../../../context/SettingsContext';
+import { getTranslation } from '../../../utils/Translations';
+// ... (Voice mock) ...
 const Voice = {
   destroy: async () => {},
   removeAllListeners: () => {},
@@ -37,7 +41,7 @@ const Voice = {
   onSpeechError: (e: any) => {},
 };
 
-// Enable LayoutAnimation for Android
+// ... (LayoutAnimation setup) ...
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -60,12 +64,47 @@ const MagicBackground = () => (
 /**
  * Main demo screen component
  */
-export const PronunciationDemoScreen: React.FC = () => {
+const PronunciationDemoScreen: React.FC = () => {
   const [customWord, setCustomWord] = useState('');
   const [words, setWords] = useState<string[]>([]);
   const [useDyslexicFont, setUseDyslexicFont] = useState(false);
   const [isListening, setIsListening] = useState(false); // Magic Dictation state
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Feature Tour State
+  const [tourVisible, setTourVisible] = useState(true); // Start visible for demo
+  const { language } = useLanguage();
+  
+  const tourSteps: TourStep[] = [
+      {
+          title: getTranslation(language, 'tour_magic_words_title'),
+          description: getTranslation(language, 'tour_magic_words_desc'),
+          position: 'top' as const, 
+          arrowPosition: 'top' as const, 
+          style: { top: 160, alignSelf: 'center' as const },
+          arrowOffset: 110 // Center
+      },
+      {
+          title: getTranslation(language, 'tour_magic_mic_title'),
+          description: getTranslation(language, 'tour_magic_mic_desc'),
+          position: 'top' as const,
+          arrowPosition: 'top' as const,
+          style: { top: 240, alignSelf: 'center' as const },
+          arrowOffset: 110 // Center
+      },
+      {
+          title: getTranslation(language, 'tour_dyslexic_font_title'),
+          description: getTranslation(language, 'tour_dyslexic_font_desc'),
+          position: 'top' as const,
+          arrowPosition: 'top' as const,
+          style: { top: 100, right: 20 },
+          arrowOffset: 200 // Right side of card
+      }
+  ];
+
+  const handleTourComplete = () => {
+      setTourVisible(false);
+  };
 
   /**
    * Effect: Setup Voice listeners
@@ -169,8 +208,8 @@ export const PronunciationDemoScreen: React.FC = () => {
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Text style={styles.headerEmoji}>🔮</Text>
           <View>
-            <Text style={styles.headerTitle}>Magic Words</Text>
-            <Text style={styles.headerSubtitle}>Type a word to hear it speak!</Text>
+            <Text style={styles.headerTitle}>{getTranslation(language, 'magic_words_title')}</Text>
+            <Text style={styles.headerSubtitle}>{getTranslation(language, 'magic_words_subtitle')}</Text>
           </View>
         </View>
         
@@ -192,7 +231,7 @@ export const PronunciationDemoScreen: React.FC = () => {
         <View style={styles.inputWrapper}>
           <TextInput
             style={[styles.input, useDyslexicFont && { fontFamily: 'OpenDyslexic-Regular' }]}
-            placeholder={isListening ? "Listening..." : "Type here..."}
+            placeholder={isListening ? getTranslation(language, 'magic_listening') : getTranslation(language, 'magic_type_here')}
             placeholderTextColor={isListening ? "#FF6B6B" : "#AAB0B6"}
             value={customWord}
             onChangeText={setCustomWord}
@@ -223,7 +262,7 @@ export const PronunciationDemoScreen: React.FC = () => {
             onPress={handleAddWord}
             disabled={!customWord.trim()}
           >
-            <Text style={styles.goButtonText}>✨ GO</Text>
+            <Text style={styles.goButtonText}>{getTranslation(language, 'magic_go')}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -239,19 +278,19 @@ export const PronunciationDemoScreen: React.FC = () => {
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>👋</Text>
             <Text style={[styles.emptyTitle, useDyslexicFont && { fontFamily: 'OpenDyslexic-Regular' }]}>
-              Welcome!
+              {getTranslation(language, 'magic_welcome')}
             </Text>
             <Text style={[styles.emptyText, useDyslexicFont && { fontFamily: 'OpenDyslexic-Regular' }]}>
-              I'm ready to read your words.{"\n"}
-              Try typing "Hello" or "Magic" above!
+              {getTranslation(language, 'magic_ready')}{"\n"}
+              {getTranslation(language, 'magic_try_typing')}
             </Text>
           </View>
         ) : (
           <>
             <View style={styles.listHeader}>
-              <Text style={styles.listTitle}>Your Spells ({words.length})</Text>
+              <Text style={styles.listTitle}>{getTranslation(language, 'magic_your_spells')} ({words.length})</Text>
               <TouchableOpacity onPress={handleClearAll}>
-                <Text style={styles.clearText}>Clear All</Text>
+                <Text style={styles.clearText}>{getTranslation(language, 'magic_clear_all')}</Text>
               </TouchableOpacity>
             </View>
             
@@ -266,6 +305,12 @@ export const PronunciationDemoScreen: React.FC = () => {
           </>
         )}
       </ScrollView>
+      <FeatureTour 
+        visible={tourVisible}
+        steps={tourSteps}
+        onComplete={handleTourComplete}
+        onSkip={handleTourComplete}
+      />
     </SafeAreaView>
   );
 };

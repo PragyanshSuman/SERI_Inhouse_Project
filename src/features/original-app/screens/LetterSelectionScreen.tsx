@@ -9,6 +9,7 @@ import {
   StatusBar,
   ActivityIndicator,
   TextInput,
+  ImageBackground,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ALPHABET, LETTER_PATHS } from '../constants/LetterPaths';
@@ -17,7 +18,7 @@ import Colors, { ColorUtils } from '../constants/Colors';
 // import AudioService from '../services/AudioService'; // Missing
 import { useAnalytics } from '../hooks/useAnalytics';
 import ProgressIndicator from '../components/ProgressIndicator';
-import FeatureTour, { TourStep } from '../components/FeatureTour';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 
 interface LetterItemProps {
   letter: string;
@@ -27,6 +28,8 @@ interface LetterItemProps {
   sessionCount: number;
   averageAccuracy?: number;
 }
+
+const BG = require('../../../assets/images/letters/Tracing_Menu_Background_New.png');
 
 const LetterItem: React.FC<LetterItemProps> = ({
   letter,
@@ -369,8 +372,9 @@ const LetterSelectionScreen: React.FC = () => {
   const filteredLetters = getFilteredLetters();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
+    <ImageBackground source={BG} style={styles.container} resizeMode="cover">
+      <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       <FlatList
         data={filteredLetters}
@@ -405,14 +409,20 @@ const LetterSelectionScreen: React.FC = () => {
       />
       {/* Debug Log */}
       {(() => { console.log('LetterSelectionScreen: Rendering FeatureTour, visible=', tourVisible); return null; })()}
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    width: '100%',
+    height: '100%',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
@@ -426,7 +436,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: 'transparent',
   },
   title: {
     fontSize: 28, // Slightly reduced
@@ -554,7 +564,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     margin: 6,
     borderRadius: 12,
-    backgroundColor: Colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     elevation: 3,
     shadowColor: Colors.shadowColor,
     shadowOffset: { width: 0, height: 2 },
@@ -627,7 +637,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: Colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },

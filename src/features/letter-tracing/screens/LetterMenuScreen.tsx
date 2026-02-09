@@ -17,6 +17,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { getAvailableLetters, isLetterAvailable } from '../letters';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import { useLanguage } from '../../../context/SettingsContext';
+import { getTranslation } from '../../../utils/Translations';
 
 const BG = require('../assets/images/letters/Tracing_Menu_Background.png');
 
@@ -63,6 +66,8 @@ function letterAsset(letter: string) {
 
 export default function LetterMenuScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { language } = useLanguage();
+  const [tourVisible, setTourVisible] = useState(true);
 
   // Get available letters from the letter registry
   const availableLetters = useMemo(() => getAvailableLetters(), []);
@@ -77,9 +82,9 @@ export default function LetterMenuScreen() {
   return (
     <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
       <View style={styles.header}>
-        <Text style={styles.title}>Choose a Letter</Text>
+        <Text style={styles.title}>{getTranslation(language, 'menu_choose_letter')}</Text>
         <Text style={styles.subtitle}>
-          {availableLetters.length} of {ALL_LETTERS.length} letters available
+          {availableLetters.length} {getTranslation(language, 'menu_letters_available')}
         </Text>
       </View>
 
@@ -105,6 +110,20 @@ export default function LetterMenuScreen() {
             />
           );
         }}
+      />
+      <FeatureTour
+        visible={tourVisible}
+        steps={[
+          {
+            title: getTranslation(language, 'menu_tour_welcome_title'),
+            description: getTranslation(language, 'menu_tour_welcome_desc'),
+            style: { top: 100, alignSelf: 'center' },
+            arrowPosition: 'top',
+          },
+
+        ]}
+        onComplete={() => setTourVisible(false)}
+        onSkip={() => setTourVisible(false)}
       />
     </ImageBackground>
   );

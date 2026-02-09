@@ -31,6 +31,9 @@ import Svg, {
 
 import { loadLetter } from '../letters';
 import type { Segment, LetterTheme } from '../letters/types';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import { useLanguage } from '../../../context/SettingsContext';
+import { getTranslation } from '../../../utils/Translations';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CANVAS_W = Math.min(420, SCREEN_W);
@@ -63,8 +66,10 @@ type SegmentState = 'locked' | 'active' | 'done';
 
 export default function TracingScreen() {
   const navigation = useNavigation();
+  const { language } = useLanguage();
   const route = useRoute<RouteProp<RootStackParamList, 'Tracing'>>();
   const letter = route.params?.letter ?? 'A';
+  const [tourVisible, setTourVisible] = useState(true);
 
   const { build, theme } = useMemo(() => loadLetter(letter), [letter]);
 
@@ -85,6 +90,27 @@ export default function TracingScreen() {
           theme={theme}
           segments={segments}
           onClose={() => navigation.goBack()}
+          language={language}
+        />
+        <FeatureTour
+            visible={tourVisible}
+            steps={[
+              {
+                title: getTranslation(language, 'tracing_tour_guide_title'),
+                description: getTranslation(language, 'tracing_tour_guide_desc'),
+                style: { top: 150, alignSelf: 'center' },
+                arrowPosition: 'top',
+              },
+              {
+                title: getTranslation(language, 'tracing_tour_progress_title'),
+                description: getTranslation(language, 'tracing_tour_progress_desc'),
+                style: { top: 70, alignSelf: 'center' },
+                arrowPosition: 'top',
+                arrowOffset: 0
+              }
+            ]}
+            onComplete={() => setTourVisible(false)}
+            onSkip={() => setTourVisible(false)}
         />
       </View>
     </ImageBackground>
@@ -141,11 +167,13 @@ function TraceLetter({
   theme,
   segments,
   onClose,
+  language,
 }: {
   letter: string;
   theme: LetterTheme;
   segments: Segment[];
   onClose: () => void;
+  language: any;
 }) {
   // Guard: if segments is missing or empty, render nothing but avoid crashes
   if (!segments || !Array.isArray(segments) || segments.length === 0) {
@@ -198,10 +226,11 @@ function TraceLetter({
         allDone={allDone}
         currentSegment={segIndex}
         images={theme.avatar}
+        language={language}
       />
 
-      <AnimatedHeaderHUD currentSegment={segments[segIndex]} />
-      <Text style={styles.letterBadge}>Tracing: {letter}</Text>
+      <AnimatedHeaderHUD currentSegment={segments[segIndex]} language={language} />
+      <Text style={styles.letterBadge}>{getTranslation(language, 'tracing_tracing_label')} {letter}</Text>
 
       <TouchableOpacity
         style={styles.closeBtnScreen}
@@ -295,10 +324,10 @@ function TraceLetter({
             onDone={goNext}
           />
         ) : !showBeeAnimation ? (
-          <SuccessBadge onRestart={handleRestart} />
+          <SuccessBadge onRestart={handleRestart} language={language} />
         ) : null}
 
-        <AnimatedLegend states={states} />
+        <AnimatedLegend states={states} language={language} />
         <ProgressBar
           progress={(segIndex + (allDone ? 1 : 0)) / segments.length}
         />
@@ -401,7 +430,7 @@ function BeeTracingAnimationSVG({ segments, beeHref, honeyHref, speedMsPerPoint,
   );
 }
 
-function AnimatedTigerAvatar({ allDone, currentSegment, images }: any) {
+function AnimatedTigerAvatar({ allDone, currentSegment, images, language }: any) {
   const bounce = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -441,7 +470,7 @@ function AnimatedTigerAvatar({ allDone, currentSegment, images }: any) {
       <Image source={getImg()} style={styles.tigerImage} resizeMode="contain" />
       {allDone && (
         <View style={styles.speechBubble}>
-          <Text style={styles.speechText}>Amazing! 🎉</Text>
+          <Text style={styles.speechText}>{getTranslation(language, 'tracing_amazing')}</Text>
         </View>
       )}
     </Animated.View>
@@ -535,7 +564,7 @@ function Sparkle({ x, y, angle }: any) {
   );
 }
 
-function AnimatedHeaderHUD({ currentSegment }: any) {
+function AnimatedHeaderHUD({ currentSegment, language }: any) {
   const bounce = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -552,24 +581,24 @@ function AnimatedHeaderHUD({ currentSegment }: any) {
   return (
     <View style={styles.hud}>
       <Animated.View style={[styles.tip, { transform: [{ translateY }] }]}>
-        <Text style={styles.tipText}>✨ Trace along the glowing line ✨</Text>
+        <Text style={styles.tipText}>{getTranslation(language, 'tracing_trace_glowing')}</Text>
       </Animated.View>
     </View>
   );
 }
 
-function AnimatedLegend({ states }: any) {
+function AnimatedLegend({ states, language }: any) {
   const labels = ['1', '2', '3'];
   return (
     <View style={styles.legend}>
       {states.map((st: any, i: number) => (
-        <AnimatedLegendItem key={i} label={labels[i] ?? `${i + 1}`} state={st} />
+        <AnimatedLegendItem key={i} label={labels[i] ?? `${i + 1}`} state={st} language={language} />
       ))}
     </View>
   );
 }
 
-function AnimatedLegendItem({ label, state }: any) {
+function AnimatedLegendItem({ label, state, language }: any) {
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -584,7 +613,7 @@ function AnimatedLegendItem({ label, state }: any) {
   return (
     <Animated.View style={[styles.legendItem, { transform: [{ scale }] }]}>
       <View style={[styles.dot, state === 'done' ? styles.dotDone : state === 'active' ? styles.dotActive : styles.dotLocked]} />
-      <Text style={styles.legendText}>Step {label}</Text>
+      <Text style={styles.legendText}>{getTranslation(language, 'tracing_step')} {label}</Text>
     </Animated.View>
   );
 }

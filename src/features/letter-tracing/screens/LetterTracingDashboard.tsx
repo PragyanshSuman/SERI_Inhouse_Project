@@ -1,7 +1,7 @@
 // src/screens/HomeScreen.tsx - ADD NEW BUTTON
 
 import React from 'react';
-import FeatureTour from '../../phonic-check/components/FeatureTour';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import {
   View,
   ImageBackground,
@@ -14,35 +14,37 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useLanguage } from '../../../context/SettingsContext';
+import { getTranslation } from '../../../utils/Translations';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
 const BG = require('../assets/images/background_for_initial_home_screen.png');
 const BTN1 = require('../assets/images/button1.png');
-const BTN2 = require('../assets/images/button2.png');
-const BTN3 = require('../assets/images/button3.png');
 
 export default function LetterTracingDashboard() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { language } = useLanguage();
 
   // Tour State
   const [tourVisible, setTourVisible] = React.useState(true);
 
-  const tourSteps = [
+  const tourSteps: TourStep[] = [
       {
-          title: "Alphabet Playground 🔤",
-          description: "Welcome! Here you can trace letters and play matching games.",
-          position: 'center' as const,
+          title: getTranslation(language, 'tour_tracing_playground_title'),
+          description: getTranslation(language, 'tour_tracing_playground_desc'),
+          position: 'top' as const,
+          style: { top: 100, alignSelf: 'center' as const },
+          arrowPosition: 'bottom' as const,
+          arrowOffset: 110,
       },
       {
-          title: "Trace A 🅰️",
-          description: "Start here to learn how to write the letter A.",
+          title: getTranslation(language, 'tour_tracing_practice_title'),
+          description: getTranslation(language, 'tour_tracing_practice_desc'),
           position: 'center' as const,
-      },
-      {
-          title: "New: Guided Tracing 🎯",
-          description: "Try our new Guided mode for step-by-step help!",
-          position: 'bottom' as const,
+          style: { top: '60%', alignSelf: 'center' as const },
+          arrowPosition: 'top' as const,
+          arrowOffset: 110,
       }
   ];
 
@@ -55,39 +57,15 @@ export default function LetterTracingDashboard() {
       <View style={styles.overlay} />
 
       <View style={styles.content}>
-        <Text style={styles.title}>Alphabet Playground</Text>
+        <Text style={styles.title}>{getTranslation(language, 'tour_tracing_playground_title')}</Text>
 
         <View style={styles.buttonsRow}>
           <HomeButton
             image={BTN1}
-            label="Trace A"
+            label={getTranslation(language, 'tour_tracing_practice_title')}
             onPress={() => navigation.navigate('LetterMenu')}
           />
-          <HomeButton
-            image={BTN2}
-            label="Trace B (Soon)"
-            onPress={() => navigation.navigate('ComingSoon', { title: 'Trace B' })}
-          />
-          <HomeButton
-            image={BTN3}
-            label="Match (Soon)"
-            onPress={() => navigation.navigate('ComingSoon', { title: 'Letter Match' })}
-          />
         </View>
-
-        {/* NEW: Guided Tracing Button */}
-        <TouchableOpacity
-          style={styles.guidedButton}
-          activeOpacity={0.9}
-          onPress={() =>
-            navigation.navigate('GuidedTracing', {
-              letter: 'A',
-              letterCase: 'uppercase',
-            })
-          }
-        >
-          <Text style={styles.guidedButtonText}>🎯 Try Guided Tracing (NEW!)</Text>
-        </TouchableOpacity>
       </View>
       <FeatureTour 
         visible={tourVisible}

@@ -9,12 +9,15 @@ import {
   TouchableOpacity,
   Alert,
   Dimensions,
+  ImageBackground,
 } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import TracingScreen from '../screens/TracingScreen';
 import { ALPHABET } from '../constants/LetterPaths';
 import WritingAssessmentScreen from '../screens/WritingAssessmentScreen';
-import FeatureTour, { TourStep } from '../components/FeatureTour'; // Dark-themed tour
+import FeatureTour, { TourStep } from '../../../components/FeatureTour'; // Dark-themed tour
+import { useLanguage } from '../../../context/SettingsContext';
+import { getTranslation } from '../../../utils/Translations';
 
 const Stack = createStackNavigator();
 const { width } = Dimensions.get('window');
@@ -23,10 +26,13 @@ const GRID_PADDING = 20;
 const ITEM_MARGIN = 8;
 const ITEM_WIDTH = (width - (GRID_PADDING * 2)) / COLUMN_COUNT - (ITEM_MARGIN * 2);
 
+const BG = require('../../../assets/images/letters/Tracing_Menu_Background_New.png');
+
 // Letter Selection Screen
 const LetterSelectionScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
-  const [tourVisible, setTourVisible] = useState(false); // No tour on this page
+  const [tourVisible, setTourVisible] = useState(true);
+  const { language } = useLanguage();
 
   useEffect(() => {
     // Preload audio files
@@ -52,23 +58,24 @@ const LetterSelectionScreen = ({ navigation }: any) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <ImageBackground source={BG} style={styles.container} resizeMode="cover">
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       <View style={styles.headerContainer}>
-        <Text style={styles.title}>Letter Mastery</Text>
-        <Text style={styles.subtitle}>Select a letter to begin practice</Text>
+        <Text style={styles.title}>{getTranslation(language, 'tour_letter_mastery_title')}</Text>
+        <Text style={styles.subtitle}>{getTranslation(language, 'tour_letter_mastery_desc')}</Text>
         <TouchableOpacity 
             style={styles.assessmentButton}
             onPress={() => navigation.navigate('Assessment')}
         >
-            <Text style={styles.assessmentButtonText}>Take Assessment</Text>
+            <Text style={styles.assessmentButtonText}>{getTranslation(language, 'tour_take_assessment_title')}</Text>
         </TouchableOpacity>
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading audio files...</Text>
+          <Text style={styles.loadingText}>{getTranslation(language, 'loading_audio')}</Text>
         </View>
       ) : (
         <FlatList
@@ -83,7 +90,7 @@ const LetterSelectionScreen = ({ navigation }: any) => {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          Designed for children with dyslexia
+            {getTranslation(language, 'footer_dyslexia')}
         </Text>
       </View>
       
@@ -91,37 +98,32 @@ const LetterSelectionScreen = ({ navigation }: any) => {
         visible={tourVisible}
         steps={[
             {
-                title: "Letter Mastery 🏆",
-                description: "Select a letter to begin practicing.",
-                style: { top: 60, alignSelf: 'center' as const },
-                arrowPosition: 'bottom' as const,
-                arrowOffset: 92,
+                title: getTranslation(language, 'tour_letter_mastery_title'),
+                description: getTranslation(language, 'tour_letter_mastery_desc'),
+                style: { top: 120, alignSelf: 'center' as const },
+                arrowPosition: 'top' as const,
+                arrowOffset: 110, // Center of 240px card
             },
             {
-                title: "Take Assessment 📝",
-                description: "Tap here to take a writing assessment.",
-                style: { top: 160, alignSelf: 'center' as const },
-                arrowPosition: 'bottom' as const,
-                arrowOffset: 92,
+                title: getTranslation(language, 'tour_take_assessment_title'),
+                description: getTranslation(language, 'tour_take_assessment_desc'),
+                style: { top: 210, alignSelf: 'center' as const },
+                arrowPosition: 'top' as const,
+                arrowOffset: 110,
             },
             {
-                title: "Select a Letter 🅰️",
-                description: "Tap any letter to start tracing.",
-                style: { top: '40%' as any, alignSelf: 'center' as const },
-                arrowPosition: 'bottom' as const,
-                arrowOffset: 92,
-            },
-            {
-                title: "Scroll for More 📜",
-                description: "Scroll down to see more letters.",
-                style: { bottom: 100, alignSelf: 'center' as const },
-                arrowPosition: 'bottom' as const,
+                title: getTranslation(language, 'tour_scroll_more_title'),
+                description: getTranslation(language, 'tour_scroll_more_desc'),
+                style: { bottom: 80, alignSelf: 'center' as const },
+                arrowPosition: 'bottom' as const, 
+                arrowOffset: 110,
             }
         ]}
         onComplete={() => setTourVisible(false)} 
         onSkip={() => setTourVisible(false)}
       />
     </SafeAreaView>
+    </ImageBackground>
   );
 };
 
@@ -175,15 +177,20 @@ const OriginalAppNavigator = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5', // Slightly cooler grey for better contrast
+    width: '100%',
+    height: '100%',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   headerContainer: {
-    paddingTop: 60, // More top space for status bar
-    paddingBottom: 30,
+    marginTop: 60, // Push down from status bar
+    marginHorizontal: 20, // Create floating effect
+    paddingVertical: 24,
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)', // Slightly more opaque for readability
+    borderRadius: 24, // Softer corners
     alignItems: 'center',
     elevation: 8,
     shadowColor: '#1A237E',
@@ -236,7 +243,7 @@ const styles = StyleSheet.create({
   letterButton: {
     width: ITEM_WIDTH,
     height: ITEM_WIDTH * 1.1, // Fixed Aspect Ratio (vertical rectangle)
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     margin: ITEM_MARGIN,
     borderRadius: 24, // Very round, pebble-like
     justifyContent: 'center',

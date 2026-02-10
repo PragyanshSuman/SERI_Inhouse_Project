@@ -3,11 +3,24 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground }
 import { useNavigation } from '@react-navigation/native';
 import { SIGHT_WORDS_DATA } from '../../../data/sightWords';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSettings } from '../../../context/SettingsContext';
+import { getTranslation } from '../../../utils/Translations';
 
 const BG_IMAGE = require('../../../assets/images/dashboard_bg.png'); // Reuse existing bg
 
 const SightWordsDashboard = () => {
     const navigation = useNavigation<any>();
+    const { settings } = useSettings();
+
+    const getLevelLabel = (id: string, defaultLabel: string) => {
+        switch(id) {
+            case 'prek': return getTranslation(settings.language, 'dashboard_ninja_level_prek');
+            case 'kindergarten': return getTranslation(settings.language, 'dashboard_ninja_level_k');
+            case 'first_grade': return getTranslation(settings.language, 'dashboard_ninja_level_1st');
+            case 'second_grade': return getTranslation(settings.language, 'dashboard_ninja_level_2nd');
+            default: return defaultLabel;
+        }
+    };
 
     return (
         <ImageBackground source={BG_IMAGE} style={styles.container}>
@@ -16,11 +29,11 @@ const SightWordsDashboard = () => {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                         <Text style={styles.backText}>←</Text>
                     </TouchableOpacity>
-                    <Text style={styles.title}>Word Ninja 🥷</Text>
+                    <Text style={styles.title}>{getTranslation(settings.language, 'dashboard_ninja_title')}</Text>
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scroll}>
-                    <Text style={styles.subtitle}>Select Your Rank</Text>
+                    <Text style={styles.subtitle}>{getTranslation(settings.language, 'dashboard_ninja_subtitle')}</Text>
                     
                     {SIGHT_WORDS_DATA.map((level) => (
                         <TouchableOpacity
@@ -37,8 +50,8 @@ const SightWordsDashboard = () => {
                             >
                                 <View style={styles.cardContent}>
                                     <View>
-                                        <Text style={styles.cardTitle}>{level.label}</Text>
-                                        <Text style={styles.cardSub}>{level.words.length} Words</Text>
+                                        <Text style={styles.cardTitle}>{getLevelLabel(level.id, level.label)}</Text>
+                                        <Text style={styles.cardSub}>{level.words.length} {getTranslation(settings.language, 'dashboard_ninja_words_suffix')}</Text>
                                     </View>
                                     <Text style={styles.playIcon}>▶</Text>
                                 </View>

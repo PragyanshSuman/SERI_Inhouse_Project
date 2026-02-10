@@ -336,13 +336,21 @@ export default function LetterSortingGameScreen() {
         })
     ).current;
 
+    // Tour Steps
     const tourSteps: TourStep[] = [
         {
-            title: "Feed the Monsters! 😋", 
-            description: "Drag the letter to the monster that matches!",
+            title: getTranslation(settings.language, 'tour_sorting_welcome_title'),
+            description: getTranslation(settings.language, 'tour_sorting_welcome_desc'),
             position: 'center',
             arrowPosition: 'bottom',
             style: { top: height * 0.4 },
+        },
+        {
+            title: getTranslation(settings.language, 'tour_sorting_drag_title'),
+            description: getTranslation(settings.language, 'tour_sorting_drag_desc'),
+            position: 'center',
+            arrowPosition: 'bottom',
+            style: { top: height * 0.6 },
         }
     ];
 

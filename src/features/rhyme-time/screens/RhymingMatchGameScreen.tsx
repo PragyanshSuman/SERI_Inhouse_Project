@@ -7,6 +7,8 @@ import { useSettings } from '../../../context/SettingsContext';
 import { RhymeWord } from '../data/rhymeData';
 import { generateMatchRound, MatchRound } from '../utils/RhymeGenerator';
 import Svg, { Circle } from 'react-native-svg';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import { getTranslation } from '../../../utils/Translations';
 
 const { width, height } = Dimensions.get('window');
 
@@ -41,6 +43,31 @@ const RhymingMatchGameScreen = () => {
     // Particles
     const [particles, setParticles] = useState<Particle[]>([]);
     const frameId = useRef<number>(0);
+
+    const [tourVisible, setTourVisible] = useState(true);
+
+    const tourSteps: TourStep[] = [
+        {
+            title: getTranslation(settings.language, 'tour_rhyme_welcome_title'),
+            description: getTranslation(settings.language, 'tour_rhyme_welcome_desc'),
+            position: 'center',
+            arrowPosition: 'bottom',
+        },
+        {
+            title: getTranslation(settings.language, 'tour_rhyme_listen_title'),
+            description: getTranslation(settings.language, 'tour_rhyme_listen_desc'),
+            position: 'center',
+            arrowPosition: 'bottom', // Pointing generally at cards
+            style: { top: height * 0.6 }
+        },
+        {
+            title: getTranslation(settings.language, 'tour_rhyme_match_title'),
+            description: getTranslation(settings.language, 'tour_rhyme_match_desc'),
+            position: 'top',
+            arrowPosition: 'top',
+            style: { top: height * 0.25, alignSelf: 'center' } // Pointing to prompt
+        }
+    ];
 
     // --- Lifecycle ---
 
@@ -196,12 +223,12 @@ const RhymingMatchGameScreen = () => {
                     <Text style={styles.backText}>←</Text>
                 </TouchableOpacity>
                 <View style={styles.scoreContainer}>
-                    <Text style={styles.scoreTitle}>HYPE</Text>
+                    <Text style={styles.scoreTitle}>{getTranslation(settings.language, 'game_score_hype')}</Text>
                     <Text style={styles.score}>{score}</Text>
                 </View>
                 {combo > 1 && (
                     <View style={styles.comboBadge}>
-                        <Text style={styles.comboText}>{combo}x COMBO!</Text>
+                        <Text style={styles.comboText}>{combo}x {getTranslation(settings.language, 'game_combo_text')}</Text>
                     </View>
                 )}
             </View>
@@ -214,7 +241,7 @@ const RhymingMatchGameScreen = () => {
                 {/* MC Frog */}
                 <Animated.View style={[styles.mascotContainer, { transform: [{ scale: mascotScale }, { rotate: spin }] }]}>
                     <Text style={styles.mascot}>🐸</Text>
-                    <Text style={styles.mascotLabel}>MC Frog</Text>
+                    <Text style={styles.mascotLabel}>{getTranslation(settings.language, 'game_mascot_frog')}</Text>
                 </Animated.View>
 
                 {/* Target Word */}
@@ -223,9 +250,9 @@ const RhymingMatchGameScreen = () => {
                     onPress={() => speak(round.target.word)}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.promptText}>"What rhymes with {round.target.word}?"</Text>
+                    <Text style={styles.promptText}>{getTranslation(settings.language, 'game_rhyme_prompt').replace('{word}', round.target.word)}</Text>
                     <Text style={styles.targetEmoji}>{round.target.image}</Text>
-                    <Text style={styles.tapHint}>Tap to hear</Text>
+                    <Text style={styles.tapHint}>{getTranslation(settings.language, 'game_tap_hint')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -271,6 +298,13 @@ const RhymingMatchGameScreen = () => {
                      <Circle key={p.id} cx={p.x} cy={p.y} r={p.size} fill={p.color} opacity={p.life} />
                  ))}
             </Svg>
+
+            <FeatureTour
+                visible={tourVisible}
+                steps={tourSteps}
+                onComplete={() => setTourVisible(false)}
+                onSkip={() => setTourVisible(false)}
+            />
         </View>
     );
 };
@@ -358,3 +392,5 @@ const styles = StyleSheet.create({
 });
 
 export default RhymingMatchGameScreen;
+
+

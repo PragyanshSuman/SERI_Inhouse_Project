@@ -4,6 +4,7 @@ export const TRANSLATIONS = {
     en: {
         // Shared
         tour_tap_to_hear: "Tap manually to hear instructions",
+        coming_soon: "Coming Soon",
 
         // Home Screen
         home_title: "Unified Learning",
@@ -16,6 +17,8 @@ export const TRANSLATIONS = {
         module_phonics_phonemes_desc: "Type or speak to hear magic!",
         module_original_app: "Letter Mastery",
         module_original_app_desc: "Deep practice & assessment",
+        module_word_ninja: "Word Ninja",
+        module_rhyme_time: "Rhyme Time",
         settings_title: "Settings",
         select_language: "Select Language",
         close: "Close",
@@ -166,10 +169,67 @@ export const TRANSLATIONS = {
         tour_vd_pairs_desc: "Select a letter pair to practice.",
         tour_odd_one_title: "Find the Odd One! 🧐",
         tour_odd_one_desc: "Tap the letter that looks different from the others.",
+
+        // Word Ninja
+        tour_ninja_welcome_title: "Word Ninja 🥷",
+        tour_ninja_welcome_desc: "Slice the correct words to become a master!",
+        tour_ninja_slice_title: "Listen & Slice ⚔️",
+        tour_ninja_slice_desc: "Listen to the word, then slice the matching card.",
+        tour_ninja_lives_title: "Watch Lives ❤️",
+        tour_ninja_lives_desc: "Don't slice the wrong word!",
+
+        // Rhyme Time
+        tour_rhyme_welcome_title: "Rhyme Time 🎵",
+        tour_rhyme_welcome_desc: "Let's find words that sound the same!",
+        tour_rhyme_match_title: "Find the Match 🧩",
+        tour_rhyme_match_desc: "Tap the picture that rhymes with the big picture.",
+        tour_rhyme_listen_title: "Tap to Hear 👂",
+        tour_rhyme_listen_desc: "Tap any card to hear its name.",
+
+        // Sorting Game (Updates)
+        tour_sorting_welcome_title: "Feed the Monsters 👾",
+        tour_sorting_welcome_desc: "Help the monsters eat their favorite letters!",
+        tour_sorting_drag_title: "Drag & Drop 👆",
+        tour_sorting_drag_desc: "Drag the letter to the matching monster.",
+
+        // Dashboard/Menu Translations
+        dashboard_ninja_title: "Word Ninja 🥷",
+        dashboard_ninja_subtitle: "Select Your Rank",
+        dashboard_ninja_level_prek: "Pre-K (Ninja Initiate)",
+        dashboard_ninja_level_k: "Kindergarten (Ninja Apprentice)",
+        dashboard_ninja_level_1st: "1st Grade (Ninja Warrior)",
+        dashboard_ninja_level_2nd: "2nd Grade (Ninja Master)",
+        dashboard_ninja_words_suffix: "Words",
+
+        dashboard_rhyme_title: "Rhyme Time 🎵",
+        dashboard_rhyme_match_title: "Make a Match",
+        dashboard_rhyme_match_desc: "Find the pair!",
+        dashboard_rhyme_train_title: "Rhyme Train",
+        dashboard_rhyme_train_desc: "Coming Soon",
+        dashboard_rhyme_vault_title: "Voice Vault",
+        dashboard_rhyme_vault_desc: "Coming Soon",
+
+        // In-Game Translations
+        game_score_hype: "HYPE",
+        game_combo_text: "COMBO!",
+        game_mascot_frog: "MC Frog",
+        game_rhyme_prompt: "What rhymes with {word}?",
+        game_tap_hint: "Tap to hear",
+
+        game_ninja_won_title: "Ninja Master! 🏆",
+        game_ninja_lost_title: "Try Again! 🥋",
+        game_ninja_won_desc: "You sliced {score} points!",
+        game_ninja_lost_desc: "Keep practicing!",
+        game_ninja_btn_levels: "Levels",
+        game_ninja_btn_play_again: "Play Again",
+        game_ninja_btn_retry: "Retry",
+        game_ninja_progress: "Words: {current} / {total}",
+        game_ninja_find_target: "FIND: {word}",
     },
     ta: {
         // Shared
         tour_tap_to_hear: "அறிவுறுத்தல்களைக் கேட்க தட்டவும்",
+        coming_soon: "விரைவில் வரும்",
 
         // Home Screen
         home_title: "ஒருங்கிணைந்த கற்றல்",
@@ -182,6 +242,8 @@ export const TRANSLATIONS = {
         module_phonics_phonemes_desc: "கேட்க தட்டச்சு செய்யவும் அல்லது பேசவும்!",
         module_original_app: "எழுத்து தேர்ச்சி",
         module_original_app_desc: "ஆழ்ந்த பயிற்சி & மதிப்பீடு",
+        module_word_ninja: "வேர்ட் நிஞ்ஜா",
+        module_rhyme_time: "ரைம் டைம்",
         settings_title: "அமைப்புகள்",
         select_language: "மொழியைத் தேர்ந்தெடுக்கவும்",
         close: "மூடு",
@@ -331,10 +393,67 @@ export const TRANSLATIONS = {
         tour_vd_pairs_desc: "பயிற்சி செய்ய ஒரு எழுத்து ஜோடியைத் தேர்ந்தெடுக்கவும்.",
         tour_odd_one_title: "வித்தியாசமானதைக் கண்டுபிடி! 🧐",
         tour_odd_one_desc: "மற்றவற்றிலிருந்து மாறுபட்ட எழுத்தைத் தட்டவும்.",
+
+        // Word Ninja
+        tour_ninja_welcome_title: "வேர்ட் நிஞ்ஜா 🥷",
+        tour_ninja_welcome_desc: "சரியான வார்த்தைகளை வெட்டி மாஸ்டர் ஆகுங்கள்!",
+        tour_ninja_slice_title: "கேளுங்கள் & வெட்டுங்கள் ⚔️",
+        tour_ninja_slice_desc: "வார்த்தையைக் கேட்டு, சரியான அட்டையை வெட்டவும்.",
+        tour_ninja_lives_title: "உயிர்களைக் கவனியுங்கள் ❤️",
+        tour_ninja_lives_desc: "தவறான வார்த்தையை வெட்ட வேண்டாம்!",
+
+        // Rhyme Time
+        tour_rhyme_welcome_title: "ரைம் டைம் 🎵",
+        tour_rhyme_welcome_desc: "ஒரே ஒலியுடைய வார்த்தைகளைக் கண்டுபிடிப்போம்!",
+        tour_rhyme_match_title: "பொருத்தத்தைக் கண்டுபிடி 🧩",
+        tour_rhyme_match_desc: "பெரிய படத்துடன் ஒலியொக்கும் படத்தைத் தட்டவும்.",
+        tour_rhyme_listen_title: "கேட்க தட்டவும் 👂",
+        tour_rhyme_listen_desc: "பெயரைக் கேட்க எந்த அட்டையையும் தட்டவும்.",
+
+        // Sorting Game (Updates)
+        tour_sorting_welcome_title: "ராட்சதர்களுக்கு உணவளிக்கவும் 👾",
+        tour_sorting_welcome_desc: "ராட்சதர்களுக்கு அவர்களுக்குப் பிடித்த எழுத்துக்களை உண்ண உதவுங்கள்!",
+        tour_sorting_drag_title: "இழுத்துவிடவும் 👆",
+        tour_sorting_drag_desc: "எழுத்தை அதற்கான ராட்சதரிடம் இழுக்கவும்.",
+
+        // Dashboard/Menu Translations
+        dashboard_ninja_title: "வேர்ட் நிஞ்ஜா 🥷",
+        dashboard_ninja_subtitle: "உங்கள் தரத்தைத் தேர்ந்தெடுக்கவும்",
+        dashboard_ninja_level_prek: "Pre-K (நிஞ்ஜா தொடக்கநிலை)",
+        dashboard_ninja_level_k: "Kindergarten (நிஞ்ஜா பயிற்சி)",
+        dashboard_ninja_level_1st: "1st Grade (நிஞ்ஜா போர்வீரன்)",
+        dashboard_ninja_level_2nd: "2nd Grade (நிஞ்ஜா மாஸ்டர்)",
+        dashboard_ninja_words_suffix: "வார்த்தைகள்",
+
+        dashboard_rhyme_title: "ரைம் டைம் 🎵",
+        dashboard_rhyme_match_title: "பொருத்தத்தை உருவாக்குங்கள்",
+        dashboard_rhyme_match_desc: "ஜோடியைக் கண்டுபிடி!",
+        dashboard_rhyme_train_title: "ரைம் ரயில்",
+        dashboard_rhyme_train_desc: "விரைவில் வரும்",
+        dashboard_rhyme_vault_title: "குரல் பெட்டகம்",
+        dashboard_rhyme_vault_desc: "விரைவில் வரும்",
+
+        // In-Game Translations
+        game_score_hype: "பரபரப்பு",
+        game_combo_text: "கலவை!",
+        game_mascot_frog: "MC தவளை",
+        game_rhyme_prompt: "{word} உடன் எது எதுகை?",
+        game_tap_hint: "கேட்க தட்டவும்",
+
+        game_ninja_won_title: "நிஞ்ஜா மாஸ்டர்! 🏆",
+        game_ninja_lost_title: "மீண்டும் முயல்க! 🥋",
+        game_ninja_won_desc: "நீங்கள் {score} புள்ளிகள் வெறெடுத்தீர்கள்!",
+        game_ninja_lost_desc: "தொடர்ந்து பயிற்சி செய்யுங்கள்!",
+        game_ninja_btn_levels: "நிலைகள்",
+        game_ninja_btn_play_again: "மீண்டும் விளையாடு",
+        game_ninja_btn_retry: "மீண்டும் முயல்க",
+        game_ninja_progress: "வார்த்தைகள்: {current} / {total}",
+        game_ninja_find_target: "தேடு: {word}",
     },
     hi: {
         // Shared
         tour_tap_to_hear: "निर्देश सुनने के लिए टैप करें",
+        coming_soon: "जल्द आ रहा है",
 
         // Home Screen
         home_title: "एकीकृत शिक्षण",
@@ -347,6 +466,8 @@ export const TRANSLATIONS = {
         module_phonics_phonemes_desc: "सुनने के लिए टाइप करें या बोलें!",
         module_original_app: "अक्षर महारत",
         module_original_app_desc: "गहन अभ्यास और मूल्यांकन",
+        module_word_ninja: "वर्ड निंजा",
+        module_rhyme_time: "राइम टाइम",
         settings_title: "सेटिंग्स",
         select_language: "भाषा चुनें",
         close: "बंद करें",
@@ -496,6 +617,62 @@ export const TRANSLATIONS = {
         tour_vd_pairs_desc: "अभ्यास करने के लिए एक अक्षर जोड़ी चुनें।",
         tour_odd_one_title: "विषम चुनें! 🧐",
         tour_odd_one_desc: "उस अक्षर पर टैप करें जो दूसरों से अलग दिखता है।",
+
+        // Word Ninja
+        tour_ninja_welcome_title: "वर्ड निंजा 🥷",
+        tour_ninja_welcome_desc: "मास्टर बनने के लिए सही शब्दों को काटें!",
+        tour_ninja_slice_title: "सुनें और काटें ⚔️",
+        tour_ninja_slice_desc: "शब्द सुनें, फिर सही कार्ड को काटें।",
+        tour_ninja_lives_title: "जीवन देखें ❤️",
+        tour_ninja_lives_desc: "गलत शब्द न काटें!",
+
+        // Rhyme Time
+        tour_rhyme_welcome_title: "राइम टाइम 🎵",
+        tour_rhyme_welcome_desc: "आइए उन शब्दों को ढूंढें जो समान ध्वनि करते हैं!",
+        tour_rhyme_match_title: "मैच खोजें 🧩",
+        tour_rhyme_match_desc: "उस चित्र पर टैप करें जो बड़े चित्र के साथ तुकबंदी करता है।",
+        tour_rhyme_listen_title: "सुनने के लिए टैप करें 👂",
+        tour_rhyme_listen_desc: "उसका नाम सुनने के लिए किसी भी कार्ड पर टैप करें।",
+
+        // Sorting Game (Updates)
+        tour_sorting_welcome_title: "राक्षसों को खिलाओ 👾",
+        tour_sorting_welcome_desc: "राक्षसों को उनके पसंदीदा अक्षर खाने में मदद करें!",
+        tour_sorting_drag_title: "खींचें और छोड़ें 👆",
+        tour_sorting_drag_desc: "अक्षर को सही राक्षस तक खींचें।",
+
+        // Dashboard/Menu Translations
+        dashboard_ninja_title: "वर्ड निंजा 🥷",
+        dashboard_ninja_subtitle: "अपनी रैंक चुनें",
+        dashboard_ninja_level_prek: "Pre-K (निंजा इनीशिएट)",
+        dashboard_ninja_level_k: "Kindergarten (निंजा अपरेंटिस)",
+        dashboard_ninja_level_1st: "1st Grade (निंजा योद्धा)",
+        dashboard_ninja_level_2nd: "2nd Grade (निंजा मास्टर)",
+        dashboard_ninja_words_suffix: "शब्द",
+
+        dashboard_rhyme_title: "राइम टाइम 🎵",
+        dashboard_rhyme_match_title: "मैच बनाएं",
+        dashboard_rhyme_match_desc: "जोड़ी खोजें!",
+        dashboard_rhyme_train_title: "राइम ट्रेन",
+        dashboard_rhyme_train_desc: "जल्द आ रहा है",
+        dashboard_rhyme_vault_title: "वॉयस वॉल्ट",
+        dashboard_rhyme_vault_desc: "जल्द आ रहा है",
+
+        // In-Game Translations
+        game_score_hype: "जोश",
+        game_combo_text: "कोम्बो!",
+        game_mascot_frog: "MC मेंढक",
+        game_rhyme_prompt: "{word} के साथ क्या तुकांत है?",
+        game_tap_hint: "सुनने के लिए टैप करें",
+
+        game_ninja_won_title: "निंजा मास्टर! 🏆",
+        game_ninja_lost_title: "पुनः प्रयास करें! 🥋",
+        game_ninja_won_desc: "आपने {score} अंक काटे!",
+        game_ninja_lost_desc: "अभ्यास करते रहें!",
+        game_ninja_btn_levels: "स्तर",
+        game_ninja_btn_play_again: "फिर से खेलें",
+        game_ninja_btn_retry: "पुनः प्रयास करें",
+        game_ninja_progress: "शब्द: {current} / {total}",
+        game_ninja_find_target: "खोजें: {word}",
     }
 };
 

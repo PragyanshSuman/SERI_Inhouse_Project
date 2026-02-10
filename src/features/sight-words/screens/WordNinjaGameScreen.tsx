@@ -7,6 +7,8 @@ import { useSettings } from '../../../context/SettingsContext';
 import { DifficultyLevel } from '../../../data/sightWords';
 import { generateRound, FlyingWord } from '../utils/WordGenerator';
 import { LinearGradient } from 'expo-linear-gradient';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import { getTranslation } from '../../../utils/Translations';
 
 const { width, height } = Dimensions.get('window');
 
@@ -51,16 +53,49 @@ const WordNinjaGameScreen = () => {
     const [renderParticles, setRenderParticles] = useState<Particle[]>([]);
     const [slicePath, setSlicePath] = useState<string>('');
 
+    const [tourVisible, setTourVisible] = useState(true);
+
+    const tourSteps: TourStep[] = [
+        {
+            title: getTranslation(settings.language, 'tour_ninja_welcome_title'),
+            description: getTranslation(settings.language, 'tour_ninja_welcome_desc'),
+            position: 'center',
+            arrowPosition: 'bottom',
+        },
+        {
+            title: getTranslation(settings.language, 'tour_ninja_slice_title'),
+            description: getTranslation(settings.language, 'tour_ninja_slice_desc'),
+            position: 'center',
+            arrowPosition: 'bottom',
+        },
+        {
+            title: getTranslation(settings.language, 'tour_ninja_lives_title'),
+            description: getTranslation(settings.language, 'tour_ninja_lives_desc'),
+            position: 'top',
+            arrowPosition: 'top',
+            style: { top: 100, left: 20 },
+        }
+    ];
+
     // Refs for Loop
     const loopRef = useRef<{
         words: GameWord[];
         particles: Particle[];
         isPlaying: boolean;
         lastTime: number;
-    }>({ words: [], particles: [], isPlaying: true, lastTime: 0 });
+    }>({ words: [], particles: [], isPlaying: !tourVisible, lastTime: 0 });
 
     const frameId = useRef<number>(0);
     const points = useRef<{x: number, y: number}[]>([]);
+    const timerRef = useRef<any[]>([]);
+
+    const startTimer = (callback: () => void, delay: number) => {
+        const id = setTimeout(() => {
+            callback();
+            timerRef.current = timerRef.current.filter(t => t !== id);
+        }, delay);
+        timerRef.current.push(id);
+    };
 
     // Audio Helper
     const playSound = (type: 'correct' | 'wrong' | 'win' | 'intro') => {
@@ -85,6 +120,7 @@ const WordNinjaGameScreen = () => {
         return () => {
              cancelAnimationFrame(frameId.current);
              Speech.stop();
+             timerRef.current.forEach(t => clearTimeout(t));
         };
     }, []);
 
@@ -229,10 +265,10 @@ const WordNinjaGameScreen = () => {
                      const newVal = prev + 1;
                      if (newVal >= TARGET_WINS) {
                          // Win triggered in next cycle or effectively here
-                         setTimeout(() => endGame('won'), 500); 
+                         startTimer(() => endGame('won'), 500); 
                          return newVal;
                      }
-                     setTimeout(nextRound, 800); // Delay for effect
+                     startTimer(nextRound, 800); // Delay for effect
                      return newVal;
                  });
                  playSound('correct');
@@ -299,14 +335,14 @@ const WordNinjaGameScreen = () => {
 
             {/* Progress Bar */}
             <View style={styles.progressContainer}>
-                <Text style={styles.progressText}>Words: {wordsFound} / {TARGET_WINS}</Text>
+                <Text style={styles.progressText}>{getTranslation(settings.language, 'game_ninja_progress').replace('{current}', wordsFound.toString()).replace('{total}', TARGET_WINS.toString())}</Text>
                 <View style={styles.progressBar}>
                     <View style={[styles.progressFill, { width: `${(wordsFound / TARGET_WINS) * 100}%` }]} />
                 </View>
             </View>
 
             {/* Target Display */}
-            <Text style={styles.targetText}>FIND: {roundTarget}</Text>
+            <Text style={styles.targetText}>{getTranslation(settings.language, 'game_ninja_find_target').replace('{word}', roundTarget)}</Text>
 
             {/* Game Layer */}
             {renderWords.map(w => (
@@ -329,25 +365,39 @@ const WordNinjaGameScreen = () => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
                         <Text style={styles.modalTitle}>
-                            {gameState === 'won' ? 'Ninja Master! 🏆' : 'Try Again! 🥋'}
+                            {gameState === 'won' ? getTranslation(settings.language, 'game_ninja_won_title') : getTranslation(settings.language, 'game_ninja_lost_title')}
                         </Text>
                         <Text style={styles.modalSub}>
-                            {gameState === 'won' ? `You sliced ${score} points!` : 'Keep practicing!'}
+                            {gameState === 'won' ? getTranslation(settings.language, 'game_ninja_won_desc').replace('{score}', score.toString()) : getTranslation(settings.language, 'game_ninja_lost_desc')}
                         </Text>
                         
                         <View style={styles.modalBtns}>
                             <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.btn, styles.btnSec]}>
-                                <Text style={styles.btnTextSec}>Levels</Text>
+                                <Text style={styles.btnTextSec}>{getTranslation(settings.language, 'game_ninja_btn_levels')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={startGame} style={[styles.btn, styles.btnPri]}>
                                 <Text style={styles.btnTextPri}>
-                                    {gameState === 'won' ? 'Play Again' : 'Retry'}
+                                    {gameState === 'won' ? getTranslation(settings.language, 'game_ninja_btn_play_again') : getTranslation(settings.language, 'game_ninja_btn_retry')}
                                 </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
             </Modal>
+            <FeatureTour
+                visible={tourVisible}
+                steps={tourSteps}
+                onComplete={() => {
+                    setTourVisible(false);
+                    loopRef.current.isPlaying = true; // Start game loop after tour
+                    loop();
+                }}
+                onSkip={() => {
+                    setTourVisible(false);
+                    loopRef.current.isPlaying = true;
+                    loop();
+                }}
+            />
         </View>
     );
 };

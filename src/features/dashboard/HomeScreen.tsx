@@ -85,13 +85,13 @@ export default function HomeScreen() {
               onPress={() => navigation.navigate('OriginalApp')}
             />
              <MenuCard
-              title="Word Ninja"
+              title={getTranslation(language, 'module_word_ninja')}
               icon="🥷"
               color="#F43F5E" // Rose-Red
               onPress={() => navigation.navigate('SightWordsDashboard')}
             />
              <MenuCard
-              title="Rhyme Time"
+              title={getTranslation(language, 'module_rhyme_time')}
               icon="🎵"
               color="#8B5CF6" // Violet
               onPress={() => navigation.navigate('RhymeDashboard')}
@@ -201,6 +201,8 @@ function MenuCard({
   onPress: () => void;
   disabled?: boolean;
 }) {
+  const { settings } = useSettings();
+  
   return (
     <TouchableOpacity
       style={[styles.card, disabled && styles.disabled]}
@@ -227,7 +229,11 @@ function MenuCard({
         </LinearGradient>
       </View>
       <Text style={styles.cardTitle} numberOfLines={2}>{title}</Text>
-      {disabled && <Text style={styles.soonBadge}>Coming Soon</Text>}
+      {disabled && (
+        <Text style={styles.soonBadge}>
+          {getTranslation(settings.language, 'coming_soon')}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }

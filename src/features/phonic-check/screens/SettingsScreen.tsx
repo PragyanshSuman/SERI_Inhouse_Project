@@ -9,19 +9,23 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Switch,
-  Alert,
   ImageBackground,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts, globalStyles } from '../theme';
 import { StorageService } from '../services/storageService';
+import { useAuth } from '../../../context/AuthContext';
 import { TTSService } from '../services/ttsService';
+
 import { AppSettings } from '../types';
+import ParentalGateModal from '../../../components/ParentalGateModal';
+import { navigationRef } from '../../../navigation/navigationRef';
 
 type RootStackParamList = {
   Home: undefined;
   Settings: undefined;
   MedicalReport: undefined;
+  ParentalDashboard: undefined;
 };
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
@@ -44,10 +48,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
     highContrast: false,
     fontSize: 'large',
     difficultyLevel: 'beginner',
-  });
+  } as AppSettings); // Suppress type mismatch since AppSettings global format was updated earlier
 
-  const storageService = new StorageService();
+  const auth = useAuth() as any;
+  const currentUserId = auth?.userId || null;
+  const storageService = new StorageService(currentUserId);
   const ttsService = new TTSService();
+
+  const [showParentalGate, setShowParentalGate] = useState(false);
 
   // Shared background
   const BACKGROUND_IMAGE = require('../../letter-tracing/assets/images/background_for_initial_home_screen.png');
@@ -59,7 +67,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const loadSettings = async () => {
     const savedSettings = await storageService.loadSettings();
     if (savedSettings) {
-      setSettings(savedSettings);
+      setSettings(savedSettings as AppSettings);
     }
   };
 
@@ -68,7 +76,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
     setSettings(newSettings);
   };
 
-  // ... (handlers remain the same) ...
   const handleSpeechRateChange = async (rate: number) => {
     const newSettings = {
       ...settings,
@@ -83,6 +90,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
     await saveSettings(newSettings);
   };
 
+  // Note: Difficulty Floor/Ceiling constraints should ideally happen elsewhere, but keeping the setter alive for children until maxed
   const handleDifficultyChange = async (difficulty: 'beginner' | 'intermediate' | 'advanced') => {
     const newSettings = { ...settings, difficultyLevel: difficulty };
     await saveSettings(newSettings);
@@ -91,24 +99,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const handleHapticToggle = async (value: boolean) => {
     const newSettings = { ...settings, hapticEnabled: value };
     await saveSettings(newSettings);
-  };
-
-  const handleClearData = () => {
-    Alert.alert(
-      'Clear All Data',
-      'Are you sure you want to delete all your progress? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            await storageService.clearAllData();
-            Alert.alert('Success', 'All data has been cleared.');
-          },
-        },
-      ]
-    );
   };
 
   const testSpeech = async () => {
@@ -268,19 +258,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Clinical Tools */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Clinical Tools 🩺</Text>
-          <View style={styles.settingCard}>
-            <TouchableOpacity 
-              style={styles.clinicalButton} 
-              onPress={() => navigation.navigate('MedicalReport')}
-            >
-              <Text style={styles.clinicalButtonText}>Generate Clinical Report</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Haptic Feedback */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences ⚙️</Text>
@@ -303,28 +280,55 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Parental Controls Gate (Replaces Clear Data & Clinical Report) */}
+        <View style={[styles.section, { marginTop: 32 }]}>
+          <View style={styles.settingCard}>
+            <TouchableOpacity 
+              style={styles.parentalButton} 
+              onPress={() => setShowParentalGate(true)}
+            >
+              <Text style={{ fontSize: 24, marginRight: 12 }}>🛡️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.parentalButtonText}>Parental Controls</Text>
+                <Text style={styles.parentalButtonSub}>Manage screen time, limits & data</Text>
+              </View>
+              <Text style={{ fontSize: 20, color: '#3B82F6' }}>›</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* App Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About 📱</Text>
           
           <View style={styles.settingCard}>
-            <Text style={styles.infoText}>Phonic Check v1.0.0</Text>
+            <Text style={styles.infoText}>Unified Learning App v1.0.0</Text>
             <Text style={styles.infoSubtext}>
-              Pronunciation practice app for dyslexic learners
+              Inclusive learning ecosystem for dyslexic learners
             </Text>
             <Text style={styles.infoSubtext}>
-              Built with ❤️ for inclusive learning
+              Built with ❤️
             </Text>
           </View>
         </View>
 
-        {/* Clear Data */}
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.dangerButton} onPress={handleClearData}>
-            <Text style={styles.dangerButtonText}>Clear All Data</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
+
+      {/* Parental PIN Modal */}
+      <ParentalGateModal 
+        visible={showParentalGate}
+        onClose={() => setShowParentalGate(false)}
+        onSuccess={() => {
+          setShowParentalGate(false);
+          // Small delay ensures Modal unmounts completely on Android before navigating,
+          // preventing "invisible overlays" from blocking the next screen.
+          setTimeout(() => {
+            if (navigationRef.isReady()) {
+              navigationRef.navigate('ParentalDashboard');
+            }
+          }, 100);
+        }}
+      />
     </SafeAreaView>
     </ImageBackground>
   );
@@ -344,7 +348,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   contentContainer: {
-    paddingBottom: 24,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
@@ -494,28 +498,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: 4,
   },
-  clinicalButton: {
-    backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 12,
+  parentalButton: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  clinicalButtonText: {
-    color: '#FFF',
+  parentalButtonText: {
+    fontSize: 18,
     fontFamily: fonts.primaryBold,
-    fontSize: fonts.sizes.medium,
+    color: '#1E293B',
   },
-  dangerButton: {
-    backgroundColor: colors.recordingActive,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  dangerButtonText: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primaryBold,
-    color: colors.cardBackground,
-  },
+  parentalButtonSub: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+  }
 });
 
 export default SettingsScreen;

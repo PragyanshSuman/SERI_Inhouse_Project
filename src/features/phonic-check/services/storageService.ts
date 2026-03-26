@@ -1,4 +1,5 @@
 // src/services/storageService.ts - Local storage service
+// Keys are namespaced by userId to prevent data leakage between accounts.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppSettings, PracticeSession } from '../types';
@@ -10,11 +11,15 @@ export interface Statistics {
     recentImprovement: number;
 }
 
-const KEYS = {
-    SETTINGS: '@settings',
-    HISTORY: '@practice_history',
-    STATS: '@statistics',
-};
+/** Returns user-scoped storage keys. Falls back to 'guest' if no userId. */
+function makeKeys(userId?: string | null) {
+  const ns = userId ?? 'guest';
+  return {
+    SETTINGS: `@settings_${ns}`,
+    HISTORY:  `@practice_history_${ns}`,
+    STATS:    `@statistics_${ns}`,
+  };
+}
 
 const DEFAULT_SETTINGS: AppSettings = {
     ttsConfig: {
@@ -39,23 +44,30 @@ const DEFAULT_STATS: Statistics = {
 };
 
 export class StorageService {
-    /**
-     * Save app settings
-     */
+    private userId: string | null;
+
+    constructor(userId?: string | null) {
+      // Accept a userId to scope all data. Pass null for guest / unauthenticated.
+      this.userId = userId ?? null;
+    }
+
+    private get KEYS() {
+      return makeKeys(this.userId);
+    }
+
+    /** Save app settings */
     public async saveSettings(settings: AppSettings): Promise<void> {
         try {
-            await AsyncStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
+            await AsyncStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(settings));
         } catch (error) {
             console.error('Error saving settings:', error);
         }
     }
 
-    /**
-     * Load app settings
-     */
+    /** Load app settings */
     public async loadSettings(): Promise<AppSettings | null> {
         try {
-            const settings = await AsyncStorage.getItem(KEYS.SETTINGS);
+            const settings = await AsyncStorage.getItem(this.KEYS.SETTINGS);
             if (settings) {
                 return JSON.parse(settings);
             }
@@ -66,33 +78,23 @@ export class StorageService {
         }
     }
 
-    /**
-     * Save a new practice session
-     */
+    /** Save a new practice session */
     public async savePracticeSession(session: PracticeSession): Promise<void> {
         try {
-            // 1. Get existing history
             const history = await this.getPracticeHistory();
-
-            // 2. Add new session
             const updatedHistory = [...history, session];
-            await AsyncStorage.setItem(KEYS.HISTORY, JSON.stringify(updatedHistory));
-
-            // 3. Update statistics
+            await AsyncStorage.setItem(this.KEYS.HISTORY, JSON.stringify(updatedHistory));
             await this.updateStatistics(session, history);
-
         } catch (error) {
             console.error('Error saving practice session:', error);
             throw error;
         }
     }
 
-    /**
-     * Get practice history
-     */
+    /** Get practice history */
     public async getPracticeHistory(limit?: number): Promise<PracticeSession[]> {
         try {
-            const historyJson = await AsyncStorage.getItem(KEYS.HISTORY);
+            const historyJson = await AsyncStorage.getItem(this.KEYS.HISTORY);
             let history: PracticeSession[] = historyJson ? JSON.parse(historyJson) : [];
 
             if (limit && history.length > limit) {
@@ -106,12 +108,10 @@ export class StorageService {
         }
     }
 
-    /**
-     * Get user statistics
-     */
+    /** Get user statistics */
     public async getStatistics(): Promise<Statistics> {
         try {
-            const statsJson = await AsyncStorage.getItem(KEYS.STATS);
+            const statsJson = await AsyncStorage.getItem(this.KEYS.STATS);
             return statsJson ? JSON.parse(statsJson) : DEFAULT_STATS;
         } catch (error) {
             console.error('Error getting statistics:', error);
@@ -119,19 +119,15 @@ export class StorageService {
         }
     }
 
-    /**
-     * Update statistics based on new session
-     */
+    /** Update statistics based on new session */
     private async updateStatistics(newSession: PracticeSession, previousHistory: PracticeSession[]): Promise<void> {
         try {
             const currentStats = await this.getStatistics();
 
-            // Calculate new averages
             const totalScore = previousHistory.reduce((sum, s) => sum + s.score, 0) + newSession.score;
             const totalWords = previousHistory.length + 1;
             const averageScore = totalScore / totalWords;
 
-            // Calculate recent improvement (metrics based on last 5 sessions)
             let recentImprovement = 0;
             if (previousHistory.length >= 5) {
                 const recentSessions = previousHistory.slice(-5);
@@ -149,19 +145,16 @@ export class StorageService {
                 recentImprovement,
             };
 
-            await AsyncStorage.setItem(KEYS.STATS, JSON.stringify(newStats));
-
+            await AsyncStorage.setItem(this.KEYS.STATS, JSON.stringify(newStats));
         } catch (error) {
             console.error('Error updating statistics:', error);
         }
     }
 
-    /**
-     * Clear all app data
-     */
+    /** Clear all data for this user */
     public async clearAllData(): Promise<void> {
         try {
-            await AsyncStorage.multiRemove([KEYS.SETTINGS, KEYS.HISTORY, KEYS.STATS]);
+            await AsyncStorage.multiRemove([this.KEYS.SETTINGS, this.KEYS.HISTORY, this.KEYS.STATS]);
         } catch (error) {
             console.error('Error clearing data:', error);
             throw error;

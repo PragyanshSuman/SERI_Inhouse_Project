@@ -14,6 +14,8 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts, globalStyles } from '../theme';
 import { StorageService } from '../services/storageService';
+
+import { useAuth } from '../../../context/AuthContext';
 import { PracticeSession } from '../types';
 
 type RootStackParamList = {
@@ -35,7 +37,9 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ navigation }) => {
     recentImprovement: 0,
   });
   const [recentSessions, setRecentSessions] = useState<PracticeSession[]>([]);
-  const storageService = new StorageService();
+  const auth = useAuth() as any;
+  const currentUserId = auth?.userId || null;
+  const storageService = new StorageService(currentUserId);
   
   // Shared background
   const BACKGROUND_IMAGE = require('../../letter-tracing/assets/images/background_for_initial_home_screen.png');

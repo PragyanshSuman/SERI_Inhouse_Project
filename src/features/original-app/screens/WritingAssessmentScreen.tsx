@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Button, ScrollView, Alert, Dimensions, TouchableOpacity } from 'react-native';
 import * as Speech from 'expo-speech';
+import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
 import { WritingCanvas, Stroke } from '../components/WritingCanvas';
 import { modelService } from '../services/ModelService';
 import { 
@@ -11,6 +12,7 @@ import {
     flipVertical,
     rotate180 
 } from '../utils/WritingUtils';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CANVAS_SIZE = SCREEN_WIDTH - 20; // Reduced margin to increase size
@@ -71,7 +73,7 @@ const WritingAssessmentScreen = () => {
         } else if (char.match(/[a-z]/)) {
             text = `Write small ${char}`;
         }
-        Speech.speak(text, { language: 'en-GB', rate: 0.8 });
+        audioEngine.speak(text, { language: 'en-GB', rate: 0.8 });
     };
 
     const checkAnswer = async () => {
@@ -149,6 +151,7 @@ const WritingAssessmentScreen = () => {
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
+            <EmotionTracker moduleName="Writing Assessment" isActive={true} />
             <Text style={styles.title}>Character Writing Test</Text>
             
             <View style={styles.statsRow}>

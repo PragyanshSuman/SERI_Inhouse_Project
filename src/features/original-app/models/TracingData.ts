@@ -81,6 +81,7 @@ export interface MLFeatures {
     topPredictions: Array<{ char: string; score: number }>;
     reversalDetected: boolean;
     reversalType?: 'horizontal_flip' | 'vertical_flip' | 'rotation_180';
+    reversalConfidence?: number;
     analysisTimestamp: string;
 }
 

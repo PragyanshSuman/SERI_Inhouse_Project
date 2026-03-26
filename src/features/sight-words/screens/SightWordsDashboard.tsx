@@ -5,6 +5,7 @@ import { SIGHT_WORDS_DATA } from '../../../data/sightWords';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const BG_IMAGE = require('../../../assets/images/dashboard_bg.png'); // Reuse existing bg
 
@@ -24,6 +25,7 @@ const SightWordsDashboard = () => {
 
     return (
         <ImageBackground source={BG_IMAGE} style={styles.container}>
+            <EmotionTracker moduleName="Sight Words Dashboard" isActive={true} />
             <LinearGradient colors={['rgba(30,41,59,0.9)', 'rgba(30,41,59,0.4)']} style={styles.overlay}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>

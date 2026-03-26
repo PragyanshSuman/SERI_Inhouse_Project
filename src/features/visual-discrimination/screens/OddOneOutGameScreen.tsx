@@ -7,6 +7,9 @@ import { getTranslation } from '../../../utils/Translations';
 import { LinearGradient } from 'expo-linear-gradient';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { generateGrid } from '../utils/gameLogic';
+import EmotionTracker from '../../../components/EmotionTracker';
+import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
+import { useSettings } from '../../../context/SettingsContext';
 
 const { width } = Dimensions.get('window');
 
@@ -69,7 +72,8 @@ export default function OddOneOutGameScreen() {
   const navigation = useNavigation();
   const route = useRoute<GameScreenRouteProp>();
   const { pairId } = route.params; 
-  const { language } = useLanguage();
+  const { settings } = useSettings();
+  const { language } = settings;
 
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
@@ -135,6 +139,10 @@ export default function OddOneOutGameScreen() {
     setGridData(newGrid);
     setKey(prev => prev + 1); 
     setGameState('playing');
+
+    if (settings.enableSound) {
+        audioEngine.speak(`Find the ${target}`, { language: 'en' });
+    }
   };
 
   const handleTilePress = (letter: string) => {
@@ -144,11 +152,13 @@ export default function OddOneOutGameScreen() {
         if (timerRef.current) clearInterval(timerRef.current);
         setScore(score + 10 + timeLeft); // Bonus for speed
         setGameState('success');
+        if (settings.enableSound) audioEngine.speak("Great job!", { pitch: 1.2 });
         setTimeout(() => {
             setLevel(level + 1);
         }, 1200); 
     } else {
         setGameState('failure');
+        if (settings.enableSound) audioEngine.speak("Oops!", { pitch: 0.8 });
         setScore(Math.max(0, score - 5)); // Penalty
         setTimeout(() => {
             setGameState('playing');
@@ -172,6 +182,7 @@ export default function OddOneOutGameScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <EmotionTracker moduleName="Odd One Out" isActive={true} />
       <LinearGradient colors={['#4F46E5', '#818CF8']} style={styles.background} />
       
       {/* Header */}

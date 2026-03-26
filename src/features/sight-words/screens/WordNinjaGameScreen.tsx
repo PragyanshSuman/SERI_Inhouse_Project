@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, PanResponder, TouchableOpacity, Modal } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Speech from 'expo-speech';
+import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useSettings } from '../../../context/SettingsContext';
 import { DifficultyLevel } from '../../../data/sightWords';
@@ -9,6 +10,7 @@ import { generateRound, FlyingWord } from '../utils/WordGenerator';
 import { LinearGradient } from 'expo-linear-gradient';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { getTranslation } from '../../../utils/Translations';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const { width, height } = Dimensions.get('window');
 
@@ -88,6 +90,7 @@ const WordNinjaGameScreen = () => {
     const frameId = useRef<number>(0);
     const points = useRef<{x: number, y: number}[]>([]);
     const timerRef = useRef<any[]>([]);
+    const lastHitTime = useRef<{[key: string]: number}>({});
 
     const startTimer = (callback: () => void, delay: number) => {
         const id = setTimeout(() => {
@@ -100,16 +103,15 @@ const WordNinjaGameScreen = () => {
     // Audio Helper
     const playSound = (type: 'correct' | 'wrong' | 'win' | 'intro') => {
         if (!settings.enableSound) return;
-        // In a real app, use expo-av for SFX. Using Speech for placeholders or just skip
-        if (type === 'correct') Speech.speak('Nice!', { pitch: 1.5, rate: 1.5 });
-        if (type === 'wrong') Speech.speak('Oops!', { pitch: 0.8, rate: 1.5 });
-        if (type === 'win') Speech.speak('Level Complete!', { pitch: 1.2 });
+        
+        if (type === 'correct') audioEngine.speak('Nice!', { pitch: 1.5, rate: 1.5 });
+        if (type === 'wrong') audioEngine.speak('Oops!', { pitch: 0.8, rate: 1.5 });
+        if (type === 'win') audioEngine.speak('Level Complete!', { pitch: 1.2 });
     };
 
     const speakTarget = (word: string) => {
         if (settings.enableSound && word) {
-            Speech.stop();
-            Speech.speak(`Find... ${word}`, { language: 'en-US', rate: 0.9 });
+            audioEngine.speak(`Find... ${word}`, { rate: 0.9 });
         }
     };
 
@@ -119,7 +121,7 @@ const WordNinjaGameScreen = () => {
         startGame();
         return () => {
              cancelAnimationFrame(frameId.current);
-             Speech.stop();
+             audioEngine.stop();
              timerRef.current.forEach(t => clearTimeout(t));
         };
     }, []);
@@ -246,10 +248,20 @@ const WordNinjaGameScreen = () => {
 
     const checkCollision = (x: number, y: number) => {
         const hitRadius = 50;
+        const now = Date.now();
         const hitIndex = loopRef.current.words.findIndex(w => {
             const cx = w.x + 40; // Approx center
             const cy = w.y + 20; 
-            return Math.hypot(x - cx, y - cy) < hitRadius;
+            const isHit = Math.hypot(x - cx, y - cy) < hitRadius;
+            
+            // Hit throttling: Don't hit the same word more than once every 500ms
+            if (isHit) {
+                const lastHit = lastHitTime.current[w.id] || 0;
+                if (now - lastHit < 500) return false;
+                lastHitTime.current[w.id] = now;
+                return true;
+            }
+            return false;
         });
 
         if (hitIndex !== -1) {
@@ -317,6 +329,7 @@ const WordNinjaGameScreen = () => {
 
     return (
         <View style={styles.container} {...panResponder.panHandlers}>
+            <EmotionTracker moduleName="Word Ninja" isActive={true} />
             {/* Header / HUD */}
             <View style={styles.header}>
                 <View style={styles.livesContainer}>

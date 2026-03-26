@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import { RootStackParamList } from '../../../navigation/RootNavigator';
 import FeatureTour from '../../../components/FeatureTour';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -63,6 +64,7 @@ export default function GuidedTracingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <EmotionTracker moduleName="Alphabet Playground" isActive={!tourVisible} />
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
       
       <View style={styles.content}>

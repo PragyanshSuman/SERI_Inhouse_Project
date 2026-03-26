@@ -7,6 +7,7 @@ import { useLanguage } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { LinearGradient } from 'expo-linear-gradient';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VisualDiscriminationDashboard'>;
 
@@ -47,6 +48,7 @@ export default function VisualDiscriminationDashboard() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <EmotionTracker moduleName="Visual Discrimination Dashboard" isActive={!tourVisible} />
       <LinearGradient
         colors={['#E0F2FE', '#F0F9FF']}
         style={styles.background}

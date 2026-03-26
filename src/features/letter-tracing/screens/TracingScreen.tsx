@@ -34,6 +34,7 @@ import type { Segment, LetterTheme } from '../letters/types';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { useLanguage } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CANVAS_W = Math.min(420, SCREEN_W);
@@ -83,6 +84,7 @@ export default function TracingScreen() {
 
   return (
     <ImageBackground source={theme.background} style={styles.bg} resizeMode="cover">
+      <EmotionTracker moduleName="Letter Tracing" isActive={true} />
       <View style={styles.overlay}>
         <FloatingStars />
         <TraceLetter

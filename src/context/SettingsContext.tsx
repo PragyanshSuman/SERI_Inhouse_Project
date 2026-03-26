@@ -15,6 +15,12 @@ export interface AppSettings {
     // Game Preferences
     enableAnimations: boolean; // Fun Mode
     enableSound: boolean;
+
+    // --- Parental Controls ---
+    parentalPIN: string;
+    maxScreenTimeMins: number; // Healthy limit: clamped between 15 and 120
+    frustrationSensitivity: 'low' | 'medium' | 'high'; 
+    maxDifficulty: 'beginner' | 'intermediate' | 'advanced';
 }
 
 interface SettingsContextType {
@@ -30,6 +36,12 @@ const defaultSettings: AppSettings = {
     rulerHeight: 120,
     enableAnimations: true,
     enableSound: true,
+    
+    // Default parental settings
+    parentalPIN: '1234',
+    maxScreenTimeMins: 60, // 1 hour default
+    frustrationSensitivity: 'medium',
+    maxDifficulty: 'advanced', // No ceiling by default
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

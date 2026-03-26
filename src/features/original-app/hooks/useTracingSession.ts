@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
-import { LetterPath, Point, ValidationResult } from '../models/TracingData';
+import { LetterPath, Point } from '../models/TracingData';
 import { ShadowFeatureExtractor } from '../services/ShadowFeatureExtractor';
-import { StrokeValidator } from '../services/StrokeValidator';
 import StorageService from '../services/StorageService';
 import { generateIdealPath } from '../utils/GeometryUtils';
 
@@ -19,26 +18,26 @@ export const useTracingSession = ({
     const [isActive, setIsActive] = useState(false);
     const [sessionStarted, setSessionStarted] = useState(false);
     const [activeStrokeIndex, setActiveStrokeIndex] = useState(0);
-    const [feedback, setFeedback] = useState<ValidationResult>({ isValid: true, feedbackType: 'none' });
 
     // Refs for engines
     const shadowEngineRef = useRef<ShadowFeatureExtractor>(new ShadowFeatureExtractor());
     const idealPathRef = useRef<any>(null);
+    // Independent counter for shadow engine — increments on every lift-off
+    // This is separate from activeStrokeIndex (which tracks the visual guide)
+    const engineStrokeCounterRef = useRef<number>(0);
 
     /**
      * Initialize session
      */
     const initializeSession = useCallback(() => {
-        // Generate ideal path for Canvas rendering/validation logic
-        // Now using REAL geometry utils
         const idealPath = generateIdealPath(letterPath.strokes, 30);
         idealPathRef.current = idealPath;
 
         shadowEngineRef.current.startSession({ letterPath, idealPath });
+        engineStrokeCounterRef.current = 0;
 
         setSessionStarted(true);
         setActiveStrokeIndex(0);
-        setFeedback({ isValid: true, feedbackType: 'none' });
     }, [letterPath]);
 
     /**
@@ -52,58 +51,58 @@ export const useTracingSession = ({
     }, [sessionStarted, initializeSession]);
 
     /**
-     * Handle touch move
+     * Handle touch move — feeds raw data into the shadow engine for metric computation
+     * NOTE: We do NOT block or validate here — the student can draw anything freely.
+     * The engine collects all kinematics data regardless of path accuracy.
      */
     const handleTouchMove = useCallback((x: number, y: number, pressure: number) => {
         if (!isActive) return;
 
-        const point: Point = { x, y };
-
-        // 1. Shadow Engine (Background)
+        // 1. Shadow Engine: always record (free drawing, no blocking)
         shadowEngineRef.current.addPoint({
             x, y,
             timestamp: Date.now(),
-            pressure
+            pressure: pressure ?? 1.0
         });
-
-        // 2. Stroke Validator (UI Critical)
-        const currentStroke = letterPath.strokes[activeStrokeIndex];
-        if (currentStroke) {
-            const validation = StrokeValidator.validatePoint(point, currentStroke);
-            setFeedback(validation);
-        }
-    }, [isActive, activeStrokeIndex, letterPath]);
+    }, [isActive]);
 
     /**
-     * Advance to next stroke
+     * Handle touch END — called on every finger lift-off.
+     * Always ends the current engine stroke so metrics are fully computed for that stroke.
      */
-    const advanceStroke = useCallback(() => {
-        // Notify shadow engine stroke is done
-        shadowEngineRef.current.endStroke(activeStrokeIndex);
+    const handleTouchEnd = useCallback(() => {
+        if (!isActive) return;
+        // Close the current stroke in the shadow engine so all metric arrays are computed
+        shadowEngineRef.current.endStroke(engineStrokeCounterRef.current);
+        engineStrokeCounterRef.current += 1;
+    }, [isActive]);
 
-        setActiveStrokeIndex(prev => prev + 1);
-        setFeedback({ isValid: true, feedbackType: 'none' });
-    }, [activeStrokeIndex]);
+    /**
+     * Advance to next stroke (visual guide only)
+     * The shadow engine stroke was already ended in handleTouchEnd.
+     */
+    const advanceStroke = useCallback((strokeIndex?: number) => {
+        setActiveStrokeIndex(prev => {
+            const next = prev + 1;
+            return next < letterPath.strokes.length ? next : prev;
+        });
+    }, [letterPath]);
 
     /**
      * Handle audio playback
      */
     const handleAudioPlay = useCallback(() => {
-        // shadowEngineRef.current.logEvent('audio_play');
+        // placeholder for audio event logging
     }, []);
 
     /**
      * End session and calculate analytics
+     * All strokes are already finalized via handleTouchEnd; this just computes the session summary.
      */
     const endSession = useCallback(async (
         completionStatus: 'completed' | 'abandoned' | 'timed_out'
     ) => {
         setIsActive(false);
-
-        // Finalize last stroke if needed
-        if (completionStatus === 'completed') {
-            shadowEngineRef.current.endStroke(activeStrokeIndex);
-        }
 
         const report = await shadowEngineRef.current.generateSessionSummary(
             `session_${Date.now()}`,
@@ -114,7 +113,6 @@ export const useTracingSession = ({
             }
         );
 
-        // Save to storage
         try {
             if (completionStatus === 'completed') {
                 await StorageService.saveAnalytics(report);
@@ -124,7 +122,7 @@ export const useTracingSession = ({
         }
 
         return report;
-    }, [activeStrokeIndex, letterPath]);
+    }, [letterPath]);
 
     /**
      * Reset session
@@ -133,18 +131,18 @@ export const useTracingSession = ({
         setIsActive(false);
         setSessionStarted(false);
         setActiveStrokeIndex(0);
-        setFeedback({ isValid: true, feedbackType: 'none' });
+        engineStrokeCounterRef.current = 0;
     }, []);
 
     return {
         isActive,
         sessionStarted,
         analytics: null,
-        idealPath: idealPathRef.current || { points: [], strokeBoundaries: [] }, // Return valid structure even if null
+        idealPath: idealPathRef.current || { points: [], strokeBoundaries: [] },
         activeStrokeIndex,
-        feedback,
         startTracing,
         handleTouchMove,
+        handleTouchEnd,
         advanceStroke,
         handleAudioPlay,
         endSession,

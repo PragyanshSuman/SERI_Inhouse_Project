@@ -18,6 +18,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { AudioRecorder } from '../services/audioRecorder';
 import { checkPronunciation } from '../services/apiService';
 import { wordDatabase } from '../data/wordDatabase';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const PhonicCheckStudioScreen = () => {
   const navigation = useNavigation<any>();
@@ -155,6 +156,7 @@ const PhonicCheckStudioScreen = () => {
 
   return (
     <ImageBackground source={BACKGROUND_IMAGE} style={styles.bg} resizeMode="cover">
+    <EmotionTracker moduleName="Phonic Check" isActive={true} />
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       

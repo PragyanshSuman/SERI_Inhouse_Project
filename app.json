@@ -22,6 +22,7 @@
       },
       "permissions": [
         "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
         "android.permission.INTERNET"
       ],
       "package": "com.anonymous.UnifiedLearningApp",
@@ -32,6 +33,12 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow UnifiedLearningApp to access your camera to track concentration."
+        }
+      ],
       [
         "expo-av"
       ],

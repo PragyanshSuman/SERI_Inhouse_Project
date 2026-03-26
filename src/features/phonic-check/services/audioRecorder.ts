@@ -3,16 +3,13 @@
 // src/services/audioRecorder.ts - Audio recording service
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
-import { Platform } from 'react-native';
+import AudioSessionManager from '../../../services/AudioSessionManager';
 
 export class AudioRecorder {
   private recording: Audio.Recording | null = null;
   private recordingPath: string | null = null;
   private isCurrentlyRecording: boolean = false;
-
-  constructor() {
-    // Check permission on init? No, better on request.
-  }
+  private lockId: string = `phonic_check_${Date.now()}`;
 
   public async requestPermissions(): Promise<boolean> {
     const response = await Audio.requestPermissionsAsync();
@@ -26,17 +23,20 @@ export class AudioRecorder {
         throw new Error('Microphone permission denied');
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
+      // Acquire exclusive lock for phonic check
+      const lockAcquired = await AudioSessionManager.requestLock(this.lockId, 'exclusive', 'PhonicCheck');
+      if (!lockAcquired) {
+        throw new Error('Could not acquire microphone lock - system busy');
+      }
+
+      await AudioSessionManager.configureRecordingSession();
 
       const { recording } = await Audio.Recording.createAsync({
         android: {
           extension: '.m4a',
           outputFormat: Audio.AndroidOutputFormat.MPEG_4,
           audioEncoder: Audio.AndroidAudioEncoder.AAC,
-          sampleRate: 44100, // Record at high quality, let backend resample
+          sampleRate: 44100,
           numberOfChannels: 1,
           bitRate: 128000,
         },
@@ -58,31 +58,31 @@ export class AudioRecorder {
 
       this.recording = recording;
       this.isCurrentlyRecording = true;
-      console.log('Recording started');
+      console.log('Recording started (Exclusive Lock Acquired)');
       return "";
     } catch (error) {
       console.error('Error starting recording:', error);
+      AudioSessionManager.releaseLock(this.lockId);
       throw error;
     }
   }
 
   public async stopRecording(): Promise<string> {
-    if (!this.recording) {
-      return this.recordingPath || '';
-    }
-
     try {
-      await this.recording.stopAndUnloadAsync();
-      const uri = this.recording.getURI();
-
-      this.recording = null;
+      if (this.recording) {
+        await this.recording.stopAndUnloadAsync();
+        const uri = this.recording.getURI();
+        this.recording = null;
+        this.recordingPath = uri;
+      }
+      
       this.isCurrentlyRecording = false;
-      this.recordingPath = uri;
-
-      console.log('Recording stopped. File saved at:', uri);
-      return uri || '';
+      AudioSessionManager.releaseLock(this.lockId);
+      console.log('Recording stopped. File saved at:', this.recordingPath);
+      return this.recordingPath || '';
     } catch (error) {
       console.error('Error stopping recording:', error);
+      AudioSessionManager.releaseLock(this.lockId);
       throw error;
     }
   }
@@ -110,17 +110,11 @@ export class AudioRecorder {
         const info = await FileSystem.getInfoAsync(fileUri);
         if (info.exists) {
           await FileSystem.deleteAsync(fileUri, { idempotent: true });
-          console.log('Recording deleted:', path);
         }
       }
     } catch (error) {
       console.error('Error deleting recording:', error);
     }
-  }
-
-  public async getRecordingDuration(path: string): Promise<number> {
-    // Approximate or read from file
-    return 0; // Simplified for now as expo Audio.Recording doesn't give file duration easily without loading sound
   }
 
   public async cleanup(): Promise<void> {

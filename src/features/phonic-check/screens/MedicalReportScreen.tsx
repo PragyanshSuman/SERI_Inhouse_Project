@@ -15,7 +15,9 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts, globalStyles } from '../theme';
 import { StorageService } from '../services/storageService';
+import { useAuth } from '../../../context/AuthContext';
 import { ReportGenerator } from '../utils/reportGenerator';
+
 import { ClinicalReport } from '../types';
 
 type RootStackParamList = {
@@ -31,6 +33,8 @@ interface Props {
 const MedicalReportScreen: React.FC<Props> = ({ navigation }) => {
   const [report, setReport] = useState<ClinicalReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const auth = useAuth() as any;
+  const currentUserId = auth?.userId || null;
 
   useEffect(() => {
     generateReport();
@@ -38,7 +42,7 @@ const MedicalReportScreen: React.FC<Props> = ({ navigation }) => {
 
   const generateReport = async () => {
     try {
-      const storage = new StorageService();
+      const storage = new StorageService(currentUserId);
       const history = await storage.getPracticeHistory();
       const generator = new ReportGenerator();
       const clinicalReport = generator.generateReport(history);

@@ -26,9 +26,10 @@ import {
   Dimensions, // Add Dimensions
 } from 'react-native';
 import { PronunciationCard } from '../components/pronunciation/PronunciationCard';
-import FeatureTour, { TourStep } from '../../../components/FeatureTour'; // Import shared tour
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { useLanguage } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import EmotionTracker from '../../../components/EmotionTracker';
 // ... (Voice mock) ...
 const Voice = {
   destroy: async () => {},
@@ -200,6 +201,7 @@ const PronunciationDemoScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <EmotionTracker moduleName="Magic Words" isActive={!tourVisible} />
       <MagicBackground />
       <StatusBar barStyle="dark-content" backgroundColor="#F0F4F8" />
       

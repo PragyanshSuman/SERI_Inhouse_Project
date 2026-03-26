@@ -1,5 +1,4 @@
 import torch
-import torchaudio
 import librosa
 import numpy as np
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor

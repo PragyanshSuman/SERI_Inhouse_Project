@@ -16,6 +16,7 @@ import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useLanguage } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -54,6 +55,7 @@ export default function LetterTracingDashboard() {
 
   return (
     <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+      <EmotionTracker moduleName="Tracing Dashboard" isActive={!tourVisible} />
       <View style={styles.overlay} />
 
       <View style={styles.content}>

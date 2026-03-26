@@ -12,6 +12,7 @@ import {
   ImageBackground
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const PhonicCheckResultScreen = () => {
   const navigation = useNavigation();
@@ -55,6 +56,7 @@ const PhonicCheckResultScreen = () => {
 
   return (
     <ImageBackground source={BACKGROUND_IMAGE} style={styles.bg} resizeMode="cover">
+    <EmotionTracker moduleName="Magic Check Result" isActive={true} />
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       

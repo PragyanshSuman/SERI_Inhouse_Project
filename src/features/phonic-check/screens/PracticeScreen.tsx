@@ -19,6 +19,8 @@ import { wordDatabase } from '../data/wordDatabase';
 import { AudioRecorder } from '../services/audioRecorder';
 import { TTSService } from '../services/ttsService';
 import { StorageService } from '../services/storageService';
+import { useAuth } from '../../../context/AuthContext';
+
 import { AudioProcessor } from '../utils/audioProcessor';
 import { MFCCExtractor } from '../utils/mfccExtractor';
 import { DTWComparator } from '../utils/dtwCompare';
@@ -55,6 +57,9 @@ interface PracticeScreenProps {
 
 const PracticeScreen: React.FC<PracticeScreenProps> = ({ navigation, route }) => {
   const { categoryId, difficulty } = route.params;
+
+  const auth = useAuth() as any;
+  const currentUserId = auth?.userId || null;
 
   // State
   const [currentWord, setCurrentWord] = useState<Word | null>(null);
@@ -105,7 +110,7 @@ const PracticeScreen: React.FC<PracticeScreenProps> = ({ navigation, route }) =>
   // Services
   const [audioRecorder] = useState(() => new AudioRecorder());
   const [ttsService] = useState(() => new TTSService());
-  const [storageService] = useState(() => new StorageService());
+  const [storageService] = useState(() => new StorageService(currentUserId));
   const [audioProcessor] = useState(() => new AudioProcessor());
   const [wordRecognizer] = useState(() => new WordRecognizer());
   const [nativeRecognizer] = useState(() => new NativeRecognizer());

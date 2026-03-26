@@ -19,6 +19,7 @@ import Colors, { ColorUtils } from '../constants/Colors';
 import { useAnalytics } from '../hooks/useAnalytics';
 import ProgressIndicator from '../components/ProgressIndicator';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 interface LetterItemProps {
   letter: string;
@@ -373,6 +374,7 @@ const LetterSelectionScreen: React.FC = () => {
 
   return (
     <ImageBackground source={BG} style={styles.container} resizeMode="cover">
+      <EmotionTracker moduleName="Letter Mastery" isActive={!tourVisible} />
       <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 

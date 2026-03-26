@@ -26,6 +26,7 @@ import { checkPronunciation } from '../services/apiService';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { useLanguage } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const { width } = Dimensions.get('window');
 
@@ -156,6 +157,7 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <EmotionTracker moduleName="Magic Check Dashboard" isActive={!tourVisible} />
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
       <View style={styles.headerContainer}>

@@ -9,6 +9,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
+import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const { width, height } = Dimensions.get('window');
 
@@ -152,7 +154,7 @@ const Monster = ({
     const playSound = async (type: 'hum' | 'munch') => {
         if (!enableSound) return;
         // Simple rate limiting or state check could be added here
-        if (type === 'munch') Speech.speak("Yum!", { pitch: variant === 'horns' ? 0.8 : 1.2, rate: 1.2 });
+        if (type === 'munch') audioEngine.speak("Yum!", { pitch: variant === 'horns' ? 0.8 : 1.2, rate: 1.2 });
         // Removed hum for now to reduce noise
     };
 
@@ -249,7 +251,7 @@ export default function LetterSortingGameScreen() {
             useNativeDriver: true
         }).start(() => {
              if (settings.enableSound) {
-                Speech.speak(next, { language: 'en' }); 
+                audioEngine.speak(next, { language: 'en' }); 
              }
         });
 
@@ -261,7 +263,7 @@ export default function LetterSortingGameScreen() {
     useEffect(() => {
         generateNextLetter();
         return () => {
-            Speech.stop();
+            audioEngine.stop();
         };
     }, []);
 
@@ -278,7 +280,7 @@ export default function LetterSortingGameScreen() {
                 setTimeout(generateNextLetter, 500); 
             });
         } else {
-            if (settings.enableSound) Speech.speak("Oops!", { pitch: 1.2 });
+            if (settings.enableSound) audioEngine.speak("Oops!", { pitch: 1.2 });
             Animated.sequence([
                 Animated.timing(pan, { toValue: { x: 20, y: 0 }, duration: 50, useNativeDriver: true }),
                 Animated.timing(pan, { toValue: { x: -20, y: 0 }, duration: 50, useNativeDriver: true }),
@@ -356,6 +358,7 @@ export default function LetterSortingGameScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <EmotionTracker moduleName="Letter Sorting" isActive={!tourVisible} />
             <LinearGradient colors={['#1E1B4B', '#312E81']} style={styles.background} />
             
             <View style={styles.header}>
@@ -556,4 +559,14 @@ const styles = StyleSheet.create({
     },
     earLeft: { left: 5 },
     earRight: { right: 5 },
+    monsterLabel: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginTop: 10,
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+        textAlign: 'center'
+    }
 });

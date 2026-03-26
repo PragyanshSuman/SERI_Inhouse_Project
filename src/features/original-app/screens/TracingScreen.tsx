@@ -21,6 +21,7 @@ import { Dimensions } from 'react-native';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { useLanguage } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 
 
@@ -92,12 +93,12 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
     activeStrokeIndex,
     startTracing,
     handleTouchMove,
+    handleTouchEnd,
     advanceStroke,
     handleAudioPlay,
     endSession,
     resetSession,
     initializeSession,
-    feedback,
   } = useTracingSession({
     letterPath,
     userId,
@@ -218,6 +219,7 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
+      <EmotionTracker moduleName="Legacy Tracing" isActive={!showInstructions && !showResults} />
       <View style={styles.header}>
         <TouchableOpacity onPress={handleExit} style={styles.exitButton}>
           <Text style={styles.exitButtonText}>✕</Text>
@@ -293,16 +295,14 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
               letterStrokes={letterPath.strokes}
               onTouchStart={startTracing}
               onTouchMove={handleTouchMove}
-              onStrokeComplete={advanceStroke} // Auto-advance stroke
+              onTouchEnd={handleTouchEnd}
+              onStrokeComplete={advanceStroke} // Advances the visual guide
               showGuidelines={true}  // Show letter template
-              showFeedback={true}
-              showHand={false} // Hide hand on main canvas
-              showStrokeHints={false} // Hide numbers on main canvas
+              showHand={false}
+              showStrokeHints={false}
               showGrid={false}
               showActiveStrokeBackground={false}
               showActiveStrokeGuide={false}
-              validationFeedback={feedback}
-              tolerancePixels={50}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
             />
@@ -405,22 +405,30 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
                 value={sessionAnalytics.ml.isCorrect ? '✅ Correct' : '❌ Incorrect'}
               />
               
-              {/* Reversal Warning */}
-              {sessionAnalytics.ml.reversalDetected && (
-                <View style={styles.warningBox}>
-                  <Text style={styles.warningIcon}>⚠️</Text>
+              {/* Detailed Reversal/Orientation Insight */}
+              {sessionAnalytics.ml.reversalDetected ? (
+                <View style={[styles.warningBox, { backgroundColor: '#FF4B4B22', borderColor: '#FF4B4B', borderWidth: 1 }]}>
+                  <Text style={styles.warningIcon}>🔄</Text>
                   <View style={styles.warningContent}>
-                    <Text style={styles.warningTitle}>{getTranslation(language, 'reversal_detected')}</Text>
-                    <Text style={styles.warningText}>
-                      {sessionAnalytics.ml.reversalType === 'horizontal_flip' && getTranslation(language, 'reversal_backward')}
-                      {sessionAnalytics.ml.reversalType === 'vertical_flip' && getTranslation(language, 'reversal_upside_down')}
-                      {sessionAnalytics.ml.reversalType === 'rotation_180' && getTranslation(language, 'reversal_rotated')}
+                    <Text style={[styles.warningTitle, { color: '#FF4B4B' }]}>{getTranslation(language, 'reversal_detected')}</Text>
+                    <Text style={[styles.warningText, { color: '#fff' }]}>
+                      {sessionAnalytics.ml.reversalType === 'horizontal_flip' && "The letter was drawn backwards (Mirrored)."}
+                      {sessionAnalytics.ml.reversalType === 'vertical_flip' && "The letter was drawn upside down (Vertical Flip)."}
+                      {sessionAnalytics.ml.reversalType === 'rotation_180' && "The letter was drawn rotated 180 degrees."}
                     </Text>
-                    {sessionAnalytics.ml.reversalConfidence && (
-                      <Text style={styles.warningSubtext}>
-                        Confidence: {(sessionAnalytics.ml.reversalConfidence * 100).toFixed(1)}%
-                      </Text>
-                    )}
+                    <Text style={[styles.warningSubtext, { color: '#999' }]}>
+                      Our AI detected this specific orientation pattern with {(sessionAnalytics.ml.reversalConfidence * 100).toFixed(0)}% confidence.
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={[styles.warningBox, { backgroundColor: '#58CC0222', borderColor: '#58CC02', borderWidth: 1 }]}>
+                  <Text style={styles.warningIcon}>✅</Text>
+                  <View style={styles.warningContent}>
+                    <Text style={[styles.warningTitle, { color: '#58CC02' }]}>Correct Orientation</Text>
+                    <Text style={[styles.warningText, { color: '#fff' }]}>
+                      The letter was drawn in the correct orientation. No mirroring or inversions detected.
+                    </Text>
                   </View>
                 </View>
               )}
@@ -429,7 +437,7 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
               {sessionAnalytics.ml.topPredictions && sessionAnalytics.ml.topPredictions.length > 1 && (
                 <View style={styles.topPredictionsContainer}>
                   <Text style={styles.topPredictionsTitle}>{getTranslation(language, 'top_predictions')}</Text>
-                  {sessionAnalytics.ml.topPredictions.slice(0, 3).map((pred, idx) => (
+                  {sessionAnalytics.ml.topPredictions.slice(0, 3).map((pred: any, idx: number) => (
                     <View key={idx} style={styles.predictionRow}>
                       <Text style={styles.predictionChar}>{idx + 1}. {pred.char}</Text>
                       <View style={styles.confidenceBar}>

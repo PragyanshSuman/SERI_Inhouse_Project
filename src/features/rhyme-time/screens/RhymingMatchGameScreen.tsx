@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Easing } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Speech from 'expo-speech';
+import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettings } from '../../../context/SettingsContext';
 import { RhymeWord } from '../data/rhymeData';
@@ -9,6 +10,7 @@ import { generateMatchRound, MatchRound } from '../utils/RhymeGenerator';
 import Svg, { Circle } from 'react-native-svg';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { getTranslation } from '../../../utils/Translations';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const { width, height } = Dimensions.get('window');
 
@@ -77,7 +79,7 @@ const RhymingMatchGameScreen = () => {
         loop();
         return () => {
             cancelAnimationFrame(frameId.current);
-            Speech.stop();
+            audioEngine.stop();
         };
     }, []);
 
@@ -159,8 +161,7 @@ const RhymingMatchGameScreen = () => {
 
     const speak = (text: string) => {
         if (settings.enableSound) {
-            Speech.stop();
-            Speech.speak(text, { language: 'en-US', rate: 1.0 });
+            audioEngine.speak(text, { rate: 1.0 });
         }
     };
 
@@ -214,6 +215,7 @@ const RhymingMatchGameScreen = () => {
 
     return (
         <View style={styles.container}>
+            <EmotionTracker moduleName="Rhyming Match" isActive={!tourVisible} />
             {/* Dynamic Background */}
             <LinearGradient colors={['#312E81', '#1E1B4B']} style={StyleSheet.absoluteFill} />
             

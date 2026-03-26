@@ -12,14 +12,18 @@ import {
   Dimensions,
   FlatList,
   Platform,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { getAvailableLetters, isLetterAvailable } from '../letters';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import EmotionTracker from '../../../components/EmotionTracker';
 
 const BG = require('../assets/images/letters/Tracing_Menu_Background.png');
 
@@ -81,6 +85,7 @@ export default function LetterMenuScreen() {
 
   return (
     <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+      <EmotionTracker moduleName="Tracing Menu" isActive={!tourVisible} />
       <View style={styles.header}>
         <Text style={styles.title}>{getTranslation(language, 'menu_choose_letter')}</Text>
         <Text style={styles.subtitle}>

@@ -1,21 +1,7 @@
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import { getApiBaseUrl } from '../../../config/apiConfig';
 
-import Constants from 'expo-constants';
-
-// Get the host IP dynamically. 
-// - On Android Emulator, this might be '10.0.2.2' or the LAN IP.
-// - On Physical Device, this is the LAN IP of your PC (e.g., 192.168.1.5).
-// - Constants.expoConfig.hostUri gives "IP:PORT" (e.g., "192.168.1.5:8081")
-const getApiUrl = () => {
-    // When using `adb reverse tcp:8000 tcp:8000`, the device can access the PC's localhost:8000 directly.
-    // However, on a physical device over Wi-Fi, you MUST use your PC's local IP address.
-    // If you are on the same Wi-Fi, use your PC's IP address (e.g., 192.168.1.5).
-    // If you are on an Android Emulator, use '10.0.2.2'.
-    return 'http://192.168.0.12:8000';
-};
-
-const API_URL = getApiUrl();
+const API_URL = getApiBaseUrl();
 
 export const checkPronunciation = async (word: string, audioUri: string) => {
     try {
@@ -41,7 +27,7 @@ export const checkPronunciation = async (word: string, audioUri: string) => {
             method: 'POST',
             body: formData,
             headers: {
-                'Content-Type': 'multipart/form-data',
+                'Accept': 'application/json',
             },
         });
 

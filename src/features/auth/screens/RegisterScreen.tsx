@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAuth } from '../../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import BackButton from '../../../components/BackButton';
 import { registerUser } from '../../../services/authApiService';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 export default function RegisterScreen({ navigation }: any) {
   const [username, setUsername] = useState('');
@@ -19,7 +20,7 @@ export default function RegisterScreen({ navigation }: any) {
     setIsLoading(true);
     try {
       const data = await registerUser(username, password);
-      await login(data.access_token);
+      await login(data.access_token, username);
     } catch (error: any) {
       console.error(error);
       if (error.message?.includes('Network') || error.message?.includes('fetch')) {
@@ -34,7 +35,8 @@ export default function RegisterScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#FDF2F8', '#FBCFE8']} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={DT.gradient.cream} style={StyleSheet.absoluteFillObject} />
+      <BackButton color={DT.accent.rose} />
       
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
         <View style={styles.logoContainer}>
@@ -86,15 +88,15 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center', padding: 24 },
   logoContainer: { alignItems: 'center', marginBottom: 40 },
   logoEmoji: { fontSize: 80, marginBottom: 10 },
-  title: { fontSize: 32, fontWeight: '900', color: '#1E293B', textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#64748B', marginTop: 8 },
-  form: { backgroundColor: '#FFF', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 5 },
-  label: { fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 8, textTransform: 'uppercase' },
-  input: { backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: '#E2E8F0', borderRadius: 12, padding: 16, fontSize: 16, color: '#1E293B', marginBottom: 20, fontWeight: '600' },
-  btn: { backgroundColor: '#DB2777', borderRadius: 12, padding: 18, alignItems: 'center', marginTop: 10 },
-  btnDisabled: { backgroundColor: '#94A3B8' },
-  btnText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  title: { fontSize: 32, fontWeight: DT.typography.weightHeavy, color: DT.text.primary, textAlign: 'center', letterSpacing: DT.typography.letterSpacingUI },
+  subtitle: { fontSize: 16, color: DT.text.secondary, marginTop: 8, lineHeight: DT.typography.lineHeightBody },
+  form: { backgroundColor: DT.surface.card, borderRadius: DT.radius.xl, padding: 24, ...DT.shadow.medium },
+  label: { fontSize: 14, fontWeight: DT.typography.weightBold, color: DT.text.secondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 },
+  input: { backgroundColor: DT.surface.input, borderWidth: 2, borderColor: DT.surface.inputBorder, borderRadius: DT.radius.md, padding: 16, fontSize: 16, color: DT.text.primary, marginBottom: 20, fontWeight: DT.typography.weightMedium, lineHeight: DT.typography.lineHeightBody },
+  btn: { backgroundColor: DT.accent.rose, borderRadius: DT.radius.md, padding: 18, alignItems: 'center', marginTop: 10 },
+  btnDisabled: { backgroundColor: DT.text.muted },
+  btnText: { color: DT.text.onDark, fontSize: 18, fontWeight: 'bold', letterSpacing: DT.typography.letterSpacingUI },
   switchBtn: { marginTop: 20, alignItems: 'center' },
-  switchTxt: { color: '#64748B', fontSize: 14 },
-  bold: { fontWeight: 'bold', color: '#DB2777' }
+  switchTxt: { color: DT.text.secondary, fontSize: 14, lineHeight: DT.typography.lineHeightBody },
+  bold: { fontWeight: 'bold', color: DT.accent.rose }
 });

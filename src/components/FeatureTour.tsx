@@ -12,6 +12,7 @@ import {
 import * as Speech from 'expo-speech';
 import { useLanguage } from '../context/SettingsContext';
 import { TRANSLATIONS, getTranslation } from '../utils/Translations';
+import { DT } from '../utils/DyslexiaTheme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -164,7 +165,7 @@ const FeatureTour: React.FC<FeatureTourProps> = ({
       case 'top':
         baseStyle.top = -arrowSize;
         baseStyle.left = offset;
-        baseStyle.borderBottomColor = '#1F2937'; // Match bg color
+        baseStyle.borderBottomColor = DT.surface.card;
         baseStyle.borderBottomWidth = arrowSize;
         baseStyle.borderLeftWidth = arrowSize;
         baseStyle.borderRightWidth = arrowSize;
@@ -174,7 +175,7 @@ const FeatureTour: React.FC<FeatureTourProps> = ({
       case 'bottom':
         baseStyle.bottom = -arrowSize;
         baseStyle.left = offset;
-        baseStyle.borderTopColor = '#1F2937';
+        baseStyle.borderTopColor = DT.surface.card;
         baseStyle.borderTopWidth = arrowSize;
         baseStyle.borderLeftWidth = arrowSize;
         baseStyle.borderRightWidth = arrowSize;
@@ -249,22 +250,17 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: DT.surface.overlay,
   },
   tooltip: {
     position: 'absolute',
-    width: 280,
-    backgroundColor: '#1F2937', 
-    borderRadius: 16,
+    width: 300,
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.lg,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 10,
+    borderWidth: 1,
+    borderColor: DT.surface.cardBorder,
+    ...DT.shadow.medium,
   },
   arrow: {
     position: 'absolute',
@@ -280,34 +276,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#F9FAFB', 
+    fontSize: 17,
+    fontWeight: DT.typography.weightBold,
+    color: DT.text.primary,
     flex: 1,
     marginRight: 8,
+    letterSpacing: DT.typography.letterSpacingBody,
   },
   stepCounter: {
     fontSize: 12,
-    color: '#9CA3AF', 
-    fontWeight: '600',
+    color: DT.text.muted,
+    fontWeight: DT.typography.weightMedium,
   },
   description: {
     fontSize: 15,
-    color: '#D1D5DB', 
-    lineHeight: 22,
+    color: DT.text.secondary,
+    lineHeight: DT.typography.lineHeightBody,
+    letterSpacing: DT.typography.letterSpacingBody,
   },
   hintContainer: {
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: DT.surface.divider,
   },
   audioHint: {
     fontSize: 11,
-    color: '#60A5FA', 
+    color: DT.accent.sky,
     fontStyle: 'italic',
   },
   footer: {
@@ -321,20 +319,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   skipText: {
-    color: '#9CA3AF', 
+    color: DT.text.muted,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: DT.typography.weightMedium,
   },
   nextButton: {
-    backgroundColor: '#4F46E5', 
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    backgroundColor: DT.accent.indigo,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: DT.radius.sm,
   },
   nextText: {
-    color: '#FFFFFF',
+    color: DT.text.onDark,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: DT.typography.weightBold,
+    letterSpacing: DT.typography.letterSpacingBody,
   },
 });
 

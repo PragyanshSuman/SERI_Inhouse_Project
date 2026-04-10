@@ -1,9 +1,8 @@
-// src/screens/LetterMenuScreen.tsx
+// src/features/letter-tracing/screens/LetterGuidingMenuScreen.tsx
 
 import React, { useMemo, useState } from 'react';
 import {
   View,
-  ImageBackground,
   StyleSheet,
   TouchableWithoutFeedback,
   Animated,
@@ -15,8 +14,14 @@ import {
 } from 'react-native';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { getAvailableLetters, isLetterAvailable } from '../letters';
-
-const BG = require('../assets/images/letters/Tracing_Menu_Background.png');
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import { useSettings } from '../../../context/SettingsContext';
+import EmotionTracker from '../../../components/EmotionTracker';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -59,7 +64,11 @@ function letterAsset(letter: string) {
   return map[letter];
 }
 
-export default function LetterMenuScreen() {
+export default function LetterGuidingMenuScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { settings } = useSettings();
+  const [tourVisible, setTourVisible] = useState(false);
+
   // Get available letters from the letter registry
   const availableLetters = useMemo(() => getAvailableLetters(), []);
 
@@ -70,17 +79,22 @@ export default function LetterMenuScreen() {
   );
   const CARD_H = CARD_W; // square
 
-  // Handle letter press - ONLY LOG, NO NAVIGATION
+  // Handle letter press
   const handleLetterPress = (letter: string) => {
-    console.log(`Letter ${letter} pressed - Add your navigation logic here`);
-    // TODO: Add your navigation logic here when ready
-    // Example: navigation.navigate('YourTracingScreen', { letter });
+    navigation.navigate('GuidedTracing', { 
+      letter, 
+      letterCase: 'upper' 
+    });
   };
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <View style={styles.bg}>
+      <EmotionTracker moduleName="Guided Tracing Menu" isActive={!tourVisible} />
+      <BackButton color={DT.accent.indigo} />
+      <InfoButton onPress={() => setTourVisible(true)} color={DT.accent.indigo} />
+      
       <View style={styles.header}>
-        <Text style={styles.title}>Choose a Letter</Text>
+        <Text style={styles.title}>Guided Tracing</Text>
         <Text style={styles.subtitle}>
           {availableLetters.length} of {ALL_LETTERS.length} letters available
         </Text>
@@ -110,7 +124,21 @@ export default function LetterMenuScreen() {
           );
         }}
       />
-    </ImageBackground>
+      
+      <FeatureTour
+        visible={tourVisible}
+        steps={[
+          {
+            title: "Guided Tracing ✍️",
+            description: "Pick a letter to practice your tracing skills with step-by-step guidance.",
+            style: { top: 100, alignSelf: 'center' },
+            arrowPosition: 'top',
+          },
+        ]}
+        onComplete={() => setTourVisible(false)}
+        onSkip={() => setTourVisible(false)}
+      />
+    </View>
   );
 }
 
@@ -132,7 +160,7 @@ function LiftedCard({
   isAvailable?: boolean;
   letter: string;
 }) {
-  const scale = useState(new Animated.Value(1))[0];
+  const [scale] = useState(new Animated.Value(1));
 
   const pressIn = () => {
     if (disabled) return;
@@ -188,130 +216,112 @@ function LiftedCard({
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1 },
+  bg: {
+    flex: 1,
+    backgroundColor: DT.bg.skyBlue,
+  },
   header: {
-    alignItems: 'center',
-    paddingTop: 14,
-    paddingBottom: 6,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    borderBottomWidth: 1,
+    borderBottomColor: DT.surface.divider,
   },
   title: {
-    fontSize: isTablet ? 26 : 22,
-    fontWeight: '900',
-    color: '#0F172A',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 14,
+    fontSize: 28,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'OpenDyslexic-Bold',
+    letterSpacing: DT.typography.letterSpacingUI,
   },
   subtitle: {
-    fontSize: isTablet ? 14 : 12,
-    fontWeight: '700',
-    color: '#64748B',
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginTop: 6,
+    fontSize: 16,
+    color: DT.text.secondary,
+    marginTop: 4,
+    fontWeight: DT.typography.weightMedium,
   },
   grid: {
     justifyContent: 'center',
-    marginTop: 10,
+    paddingTop: 10,
   },
-
-  // Container that allows both shadow layers to breathe
   cardWrap: {
     borderRadius: 22,
+    marginVertical: GAP / 2,
   },
-
-  // Outer soft shadow (ambient)
   shadowA: {
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.18,
-        shadowRadius: 20,
+        shadowColor: DT.shadow.soft.shadowColor,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 15,
       },
-      android: { elevation: 8 },
+      android: { elevation: 6 },
     }),
     borderRadius: 22,
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 4,
+    top: 3,
     bottom: 0,
   },
-
   shadowDisabled: {
     ...Platform.select({
-      ios: {
-        shadowOpacity: 0.08,
-      },
-      android: { elevation: 2 },
+      ios: { shadowOpacity: 0.05 },
+      android: { elevation: 1 },
     }),
   },
-
-  // Inner content with a tighter drop shadow; transparent background
   cardInner: {
     borderRadius: 22,
-    overflow: 'visible',
-    backgroundColor: 'transparent',
+    backgroundColor: DT.surface.card,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.16,
-        shadowRadius: 8,
+        shadowColor: DT.shadow.soft.shadowColor,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
       },
-      android: { elevation: 6 },
+      android: { elevation: 4 },
     }),
     flex: 1,
   },
-
   cardDisabled: {
     ...Platform.select({
-      ios: {
-        shadowOpacity: 0.06,
-      },
-      android: { elevation: 2 },
+      ios: { shadowOpacity: 0.04 },
+      android: { elevation: 1 },
     }),
   },
-
   image: {
-    width: '96%',
-    height: '96%',
+    width: '94%',
+    height: '94%',
     borderRadius: 20,
   },
-
   gloss: {
     position: 'absolute',
-    left: 10,
-    right: 10,
-    top: 10,
+    left: 8,
+    right: 8,
+    top: 8,
     height: '40%',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    backgroundColor: DT.surface.softOverlay,
   },
-
   comingSoonBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: 'rgba(251,191,36,0.95)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#FBBF24',
+    top: 4,
+    right: 4,
+    backgroundColor: DT.accent.amber,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-
   comingSoonText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#78350F',
+    fontSize: 8,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.onDark,
     textTransform: 'uppercase',
   },
 });

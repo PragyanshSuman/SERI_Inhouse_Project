@@ -8,6 +8,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useEmotion } from '../../../context/EmotionContext';
 import { fetchEmotionReport } from '../../../services/emotionApiService';
 import { StorageService } from '../../phonic-check/services/storageService';
+import BackButton from '../../../components/BackButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -186,10 +187,9 @@ export default function LearningJourneyReportScreen() {
       <StatusBar barStyle="dark-content" />
       <LinearGradient colors={['#F8FAFC', '#E2E8F0']} style={StyleSheet.absoluteFillObject} />
 
+      <BackButton color="#6366F1" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#6366F1" />
-        </TouchableOpacity>
+        <View style={{ flex: 1 }} />
         <Text style={styles.headerTitle}>Learning Profile</Text>
         <TouchableOpacity style={styles.actionBtn} onPress={() => alert('Pedagogical Report Exported')}>
           <Text style={styles.actionBtnTxt}>Export</Text>
@@ -397,7 +397,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 15, backgroundColor: 'transparent'
   },
-  backBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 14, elevation: 3 },
   headerTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B' },
   actionBtn: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#6366F1', borderRadius: 12 },
   actionBtnTxt: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },

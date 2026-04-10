@@ -7,7 +7,6 @@ import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import {
   View,
   Text,
-  ImageBackground,
   StyleSheet,
   Dimensions,
   PanResponder,
@@ -18,7 +17,8 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import Svg, {
+import {
+  Svg,
   Path,
   Circle,
   G,
@@ -32,9 +32,12 @@ import Svg, {
 import { loadLetter } from '../letters';
 import type { Segment, LetterTheme } from '../letters/types';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
-import { useLanguage } from '../../../context/SettingsContext';
+import { useLanguage, useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
 import EmotionTracker from '../../../components/EmotionTracker';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CANVAS_W = Math.min(420, SCREEN_W);
@@ -67,10 +70,11 @@ type SegmentState = 'locked' | 'active' | 'done';
 
 export default function TracingScreen() {
   const navigation = useNavigation();
-  const { language } = useLanguage();
+  const { settings } = useSettings();
+  const { language } = settings;
   const route = useRoute<RouteProp<RootStackParamList, 'Tracing'>>();
   const letter = route.params?.letter ?? 'A';
-  const [tourVisible, setTourVisible] = useState(true);
+  const [tourVisible, setTourVisible] = useState(false);
 
   const { build, theme } = useMemo(() => loadLetter(letter), [letter]);
 
@@ -83,9 +87,18 @@ export default function TracingScreen() {
   console.log("TracingScreen segments:", segments);
 
   return (
-    <ImageBackground source={theme.background} style={styles.bg} resizeMode="cover">
-      <EmotionTracker moduleName="Letter Tracing" isActive={true} />
+    <View style={styles.bg}>
+      <EmotionTracker moduleName="Letter Tracing" isActive={!tourVisible} />
       <View style={styles.overlay}>
+        <BackButton 
+          onPress={() => navigation.goBack()} 
+          backgroundColor="transparent"
+          color={DT.accent.indigo}
+        />
+        <InfoButton 
+          onPress={() => setTourVisible(true)} 
+          color={DT.accent.indigo}
+        />
         <FloatingStars />
         <TraceLetter
           letter={letter}
@@ -111,11 +124,15 @@ export default function TracingScreen() {
                 arrowOffset: 0
               }
             ]}
-            onComplete={() => setTourVisible(false)}
-            onSkip={() => setTourVisible(false)}
+            onComplete={() => {
+                setTourVisible(false);
+            }}
+            onSkip={() => {
+                setTourVisible(false);
+            }}
         />
       </View>
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -234,13 +251,7 @@ function TraceLetter({
       <AnimatedHeaderHUD currentSegment={segments[segIndex]} language={language} />
       <Text style={styles.letterBadge}>{getTranslation(language, 'tracing_tracing_label')} {letter}</Text>
 
-      <TouchableOpacity
-        style={styles.closeBtnScreen}
-        activeOpacity={0.7}
-        onPress={onClose}
-      >
-        <Text style={styles.closeText}>×</Text>
-      </TouchableOpacity>
+      {/* Back button removed here and moved to top of overlay for better positioning with InfoButton */}
 
       <View style={styles.canvasWrap}>
         <Svg width={CANVAS_W} height={CANVAS_H}>
@@ -757,8 +768,14 @@ function SegmentTracer({ segment, onDone }: any) {
 const SAFE_TOP = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: '#87CEEB' },
-  overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 28 },
+  bg: {
+    flex: 1,
+    backgroundColor: DT.bg.cream,
+  },
+  overlay: {
+    flex: 1,
+    paddingTop: SAFE_TOP,
+  },
   canvasWrap: { width: CANVAS_W, height: CANVAS_H, alignItems: 'center', justifyContent: 'center' },
   tigerContainer: { position: 'absolute', bottom: 80, left: 30, zIndex: 1000, pointerEvents: 'none' },
   tigerImage: { width: 350, height: 350 },
@@ -821,24 +838,6 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     zIndex: 5,
   },
-  closeBtnScreen: {
-    position: 'absolute',
-    top: SAFE_TOP + 6,
-    right: 10,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 4,
-    zIndex: 10000,
-  },
-  closeText: { color: 'white', fontSize: 24, lineHeight: 26, marginTop: -2 },
   tip: {
     paddingHorizontal: 16,
     paddingVertical: 10,

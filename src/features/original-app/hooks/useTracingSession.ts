@@ -16,6 +16,7 @@ export const useTracingSession = ({
     userDemographics,
 }: UseTracingSessionProps) => {
     const [isActive, setIsActive] = useState(false);
+    const isActiveRef = useRef(false);
     const [sessionStarted, setSessionStarted] = useState(false);
     const [activeStrokeIndex, setActiveStrokeIndex] = useState(0);
 
@@ -43,11 +44,21 @@ export const useTracingSession = ({
     /**
      * Start tracing
      */
-    const startTracing = useCallback(() => {
+    const startTracing = useCallback((x?: number, y?: number) => {
         if (!sessionStarted) {
             initializeSession();
         }
         setIsActive(true);
+        isActiveRef.current = true;
+        
+        // Push the very first touch point to prevent dropped headers
+        if (x !== undefined && y !== undefined) {
+             shadowEngineRef.current.addPoint({
+                x, y,
+                timestamp: Date.now(),
+                pressure: 1.0
+            });
+        }
     }, [sessionStarted, initializeSession]);
 
     /**
@@ -56,7 +67,7 @@ export const useTracingSession = ({
      * The engine collects all kinematics data regardless of path accuracy.
      */
     const handleTouchMove = useCallback((x: number, y: number, pressure: number) => {
-        if (!isActive) return;
+        if (!isActiveRef.current) return;
 
         // 1. Shadow Engine: always record (free drawing, no blocking)
         shadowEngineRef.current.addPoint({
@@ -64,18 +75,18 @@ export const useTracingSession = ({
             timestamp: Date.now(),
             pressure: pressure ?? 1.0
         });
-    }, [isActive]);
+    }, []);
 
     /**
      * Handle touch END — called on every finger lift-off.
      * Always ends the current engine stroke so metrics are fully computed for that stroke.
      */
     const handleTouchEnd = useCallback(() => {
-        if (!isActive) return;
+        if (!isActiveRef.current) return;
         // Close the current stroke in the shadow engine so all metric arrays are computed
         shadowEngineRef.current.endStroke(engineStrokeCounterRef.current);
         engineStrokeCounterRef.current += 1;
-    }, [isActive]);
+    }, []);
 
     /**
      * Advance to next stroke (visual guide only)
@@ -129,6 +140,7 @@ export const useTracingSession = ({
      */
     const resetSession = useCallback(() => {
         setIsActive(false);
+        isActiveRef.current = false;
         setSessionStarted(false);
         setActiveStrokeIndex(0);
         engineStrokeCounterRef.current = 0;

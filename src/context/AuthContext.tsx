@@ -4,8 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type AuthContextType = {
   token: string | null;
   userId: string | null;  // decoded from token for data namespacing
+  username: string | null;
   isLoading: boolean;
-  login: (token: string) => Promise<void>;
+  login: (token: string, username?: string) => Promise<void>;
   logout: () => Promise<void>;
   onLogout: (cb: () => void) => () => void;  // subscribe to logout events
 };
@@ -26,19 +27,26 @@ function decodeTokenSub(token: string): string | null {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const logoutListeners = useRef<Array<() => void>>([]);
 
   useEffect(() => {
     const loadToken = async () => {
       try {
-        const storedToken = await AsyncStorage.getItem('userToken');
+        const [storedToken, storedUsername] = await Promise.all([
+          AsyncStorage.getItem('userToken'),
+          AsyncStorage.getItem('username')
+        ]);
         if (storedToken) {
           setToken(storedToken);
           setUserId(decodeTokenSub(storedToken));
         }
+        if (storedUsername) {
+          setUsername(storedUsername);
+        }
       } catch (e) {
-        console.error('Failed to load token', e);
+        console.error('Failed to load auth data', e);
       } finally {
         setIsLoading(false);
       }
@@ -46,18 +54,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadToken();
   }, []);
 
-  const login = async (newToken: string) => {
+  const login = async (newToken: string, newUsername?: string) => {
     try {
       // Fire logout listeners first to wipe previous user's data
       logoutListeners.current.forEach(cb => cb());
 
-      await AsyncStorage.setItem('userToken', newToken);
+      const promises: Promise<any>[] = [AsyncStorage.setItem('userToken', newToken)];
+      if (newUsername) {
+        promises.push(AsyncStorage.setItem('username', newUsername));
+      }
+
+      await Promise.all(promises);
+      
       const newUserId = decodeTokenSub(newToken);
       setToken(newToken);
       setUserId(newUserId);
-      console.log(`[Auth] Logged in as: ${newUserId}`);
+      if (newUsername) {
+        setUsername(newUsername);
+      }
+      console.log(`[Auth] Logged in as: ${newUsername || newUserId}`);
     } catch (e) {
-      console.error('Failed to save token', e);
+      console.error('Failed to save auth data', e);
     }
   };
 
@@ -66,12 +83,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Notify all subscribers to clear their data first
       logoutListeners.current.forEach(cb => cb());
 
-      await AsyncStorage.removeItem('userToken');
+      await Promise.all([
+        AsyncStorage.removeItem('userToken'),
+        AsyncStorage.removeItem('username')
+      ]);
       setToken(null);
       setUserId(null);
+      setUsername(null);
       console.log('[Auth] Logged out — all session data cleared');
     } catch (e) {
-      console.error('Failed to remove token', e);
+      console.error('Failed to clear auth data', e);
     }
   };
 
@@ -84,7 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ token, userId, isLoading, login, logout, onLogout }}>
+    <AuthContext.Provider value={{ token, userId, username, isLoading, login, logout, onLogout }}>
       {children}
     </AuthContext.Provider>
   );

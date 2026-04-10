@@ -11,6 +11,10 @@ import TracingScreen from '../features/letter-tracing/screens/TracingScreen';
 import LetterMenuScreen from '../features/letter-tracing/screens/LetterMenuScreen';
 import GuidedTracingScreen from '../features/letter-tracing/screens/GuidedTracingScreen';
 import ComingSoonScreen from '../features/letter-tracing/screens/ComingSoonScreen';
+import FlexibleTracingDemo from '../features/letter-tracing/screens/FlexibleTracingDemo';
+import ProceduralGeometryDemo from '../features/letter-tracing/screens/ProceduralGeometryDemo';
+import ScalableLetterMenuScreen from '../features/letter-tracing/screens/ScalableLetterMenuScreen';
+import ScalableGuidedTracingScreen from '../features/letter-tracing/screens/ScalableGuidedTracingScreen';
 import PronunciationDemoScreen from '../features/phonics-phonemes/screens/PronunciationDemoScreen';
 import PhonicCheckDashboard from '../features/phonic-check/screens/PhonicCheckDashboard';
 import PhonicCheckStudioScreen from '../features/phonic-check/screens/PhonicCheckStudioScreen';
@@ -30,8 +34,11 @@ import EmotionReportScreen from '../features/reports/screens/EmotionReportScreen
 import LearningJourneyReportScreen from '../features/reports/screens/LearningJourneyReportScreen';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
+import LearningPathScreen from '../features/learning-path/screens/LearningPathScreen';
+import PathNodeScreen from '../features/learning-path/screens/PathNodeScreen';
 import { DifficultyLevel } from '../data/sightWords';
 import ParentalDashboard from '../components/ParentalDashboard';
+import ModeSelectionScreen from '../features/dashboard/ModeSelectionScreen';
 
 
 export type RootStackParamList = {
@@ -40,8 +47,12 @@ export type RootStackParamList = {
   Tracing: { letter: string };
   LetterMenu: undefined;
   GuidedTracing: { letter: string; letterCase: string };
+  FlexibleTracingDemo: undefined;
+  ProceduralGeometryDemo: undefined;
+  ScalableLetterMenu: undefined;
+  ScalableGuidedTracing: { letter: string };
   ComingSoon: { title: string };
-  PhonicsPhonemes: undefined;
+  PhonicsPhonemes: { mode?: 'custom' | 'adaptive' };
   ParentalDashboard: undefined;
   
   // New Phonic Check Routes
@@ -53,15 +64,18 @@ export type RootStackParamList = {
   // I will map 'PhonicCheck' to 'PhonicCheckStudioScreen' to replace the old dashboard directly if that's the goal, 
   // OR keep specific names.
   // Let's add new names for clarity.
-  PhonicCheckStudio: undefined;
+  PhonicCheckStudio: { mode?: 'custom' | 'adaptive' };
   PhonicCheckResult: { result: any; word: string };
+  
+  // Adaptive Learning Path Intermediate Screen
+  ModeSelection: { toolType: 'magic_words' | 'pronunciation' };
   
   Progress: undefined; // Keep for now
   Settings: undefined;
   OriginalApp: undefined;
   VisualDiscriminationDashboard: undefined;
-  OddOneOutGame: { pairId: string };
-  LetterSortingGame: { pairId: string };
+  OddOneOutGame: { pairId: string; dysPathRounds?: number };
+  LetterSortingGame: { pairId: string; dysPathRounds?: number };
   SightWordsDashboard: undefined;
   WordNinjaGame: { levelId: DifficultyLevel };
   RhymeDashboard: undefined;
@@ -72,6 +86,10 @@ export type RootStackParamList = {
   // Auth Flows
   Login: undefined;
   Register: undefined;
+
+  // ── DysPath ──────────────────────────────────────────────────────────────
+  LearningPath: undefined;
+  PathNode: { nodeId: string; fromLesson?: boolean; completedScore?: number; completedDuration?: number };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -90,6 +108,10 @@ function AppStack() {
       <Stack.Screen name="Tracing" component={TracingScreen} />
       <Stack.Screen name="LetterMenu" component={LetterMenuScreen} />
       <Stack.Screen name="GuidedTracing" component={GuidedTracingScreen} />
+      <Stack.Screen name="FlexibleTracingDemo" component={FlexibleTracingDemo} />
+      <Stack.Screen name="ProceduralGeometryDemo" component={ProceduralGeometryDemo} />
+      <Stack.Screen name="ScalableLetterMenu" component={ScalableLetterMenuScreen} />
+      <Stack.Screen name="ScalableGuidedTracing" component={ScalableGuidedTracingScreen} />
       <Stack.Screen name="ComingSoon" component={ComingSoonScreen} />
       <Stack.Screen name="PhonicsPhonemes" component={PronunciationDemoScreen} />
       
@@ -114,8 +136,15 @@ function AppStack() {
       <Stack.Screen name="EmotionReport" component={EmotionReportScreen} />
       <Stack.Screen name="LearningJourneyReport" component={LearningJourneyReportScreen} />
 
+      {/* DysPath */}
+      <Stack.Screen name="LearningPath" component={LearningPathScreen} />
+      <Stack.Screen name="PathNode" component={PathNodeScreen} />
+
       {/* Parental Controls */}
       <Stack.Screen name="ParentalDashboard" component={ParentalDashboard} />
+
+      {/* Mode Selection */}
+      <Stack.Screen name="ModeSelection" component={ModeSelectionScreen} />
     </Stack.Navigator>
   );
 }

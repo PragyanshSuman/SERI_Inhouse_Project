@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, PanResponder, TouchableOpacity, Modal } from 'react-native';
+import { View, StyleSheet, Dimensions, PanResponder, TouchableOpacity, Modal, Animated, Easing, Platform } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Speech from 'expo-speech';
 import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { useSettings } from '../../../context/SettingsContext';
+import { useLanguage, useSettings } from '../../../context/SettingsContext';
 import { DifficultyLevel } from '../../../data/sightWords';
 import { generateRound, FlyingWord } from '../utils/WordGenerator';
 import { LinearGradient } from 'expo-linear-gradient';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { getTranslation } from '../../../utils/Translations';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
 import EmotionTracker from '../../../components/EmotionTracker';
+import { recordSightWords } from '../../learning-path/services/PathProgressBridge';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -46,16 +51,15 @@ const WordNinjaGameScreen = () => {
     // Game State
     const [score, setScore] = useState(0);
     const [wordsFound, setWordsFound] = useState(0);
-    const [lives, setLives] = useState(MAX_LIVES);
     const [roundTarget, setRoundTarget] = useState<string>('');
-    const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
+    const [gameState, setGameState] = useState<'waiting' | 'playing' | 'won' | 'lost'>('waiting');
     
     // Rendering State
     const [renderWords, setRenderWords] = useState<GameWord[]>([]);
     const [renderParticles, setRenderParticles] = useState<Particle[]>([]);
     const [slicePath, setSlicePath] = useState<string>('');
 
-    const [tourVisible, setTourVisible] = useState(true);
+    const [tourVisible, setTourVisible] = useState(false);
 
     const tourSteps: TourStep[] = [
         {
@@ -85,7 +89,7 @@ const WordNinjaGameScreen = () => {
         particles: Particle[];
         isPlaying: boolean;
         lastTime: number;
-    }>({ words: [], particles: [], isPlaying: !tourVisible, lastTime: 0 });
+    }>({ words: [], particles: [], isPlaying: true, lastTime: 0 });
 
     const frameId = useRef<number>(0);
     const points = useRef<{x: number, y: number}[]>([]);
@@ -115,10 +119,8 @@ const WordNinjaGameScreen = () => {
         }
     };
 
-    // --- Game Lifecycle ---
-
     useEffect(() => {
-        startGame();
+        // Do NOT auto-start. Let user press Start to prepare themselves.
         return () => {
              cancelAnimationFrame(frameId.current);
              audioEngine.stop();
@@ -126,19 +128,22 @@ const WordNinjaGameScreen = () => {
         };
     }, []);
 
+    const startTime = useRef<number>(Date.now());
+
     const startGame = () => {
+        startTime.current = Date.now();
         setScore(0);
         setWordsFound(0);
-        setLives(MAX_LIVES);
         setGameState('playing');
         loopRef.current.particles = [];
         loopRef.current.words = [];
         startRound();
-        
+
         loopRef.current.isPlaying = true;
         loopRef.current.lastTime = Date.now();
         loop();
     };
+
 
     const startRound = () => {
         const newRound = generateRound(levelId, width, height);
@@ -173,6 +178,16 @@ const WordNinjaGameScreen = () => {
         loopRef.current.isPlaying = false;
         setGameState(result);
         playSound(result === 'won' ? 'win' : 'wrong');
+
+        // ── PathProgressBridge: record this session ───────────────────────
+        const durationSecs = Math.round((Date.now() - startTime.current) / 1000);
+        recordSightWords(
+          score,
+          wordsFound,
+          TARGET_WINS,
+          levelId,
+          durationSecs
+        );
     };
 
     // --- Game Loop ---
@@ -229,30 +244,23 @@ const WordNinjaGameScreen = () => {
     // --- Logic ---
 
     const spawnExplosion = (x: number, y: number, color: string) => {
-        const count = 12;
-        for (let i = 0; i < count; i++) {
-            const angle = (Math.PI * 2 / count) * i;
-            const speed = Math.random() * 5 + 2;
-            loopRef.current.particles.push({
-                id: Math.random().toString(),
-                x,
-                y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 1.0,
-                color,
-                size: Math.random() * 10 + 5
-            });
-        }
+        // Particles removed for Zen reading mode (less visual clutter)
     };
 
     const checkCollision = (x: number, y: number) => {
-        const hitRadius = 50;
         const now = Date.now();
         const hitIndex = loopRef.current.words.findIndex(w => {
-            const cx = w.x + 40; // Approx center
-            const cy = w.y + 20; 
-            const isHit = Math.hypot(x - cx, y - cy) < hitRadius;
+            // Calculate accurate rectangular bounding box dynamically
+            const approxWidth = w.text.length * 22 + 48; // 22px per char + 48px padding
+            const approxHeight = 85; // 34px font + 24px padding + borders
+            
+            // Forgiveness padding for Dyslexic tracing (loose tracing)
+            const padding = 30; 
+            
+            const isHit = x >= (w.x - padding) && 
+                          x <= (w.x + approxWidth + padding) && 
+                          y >= (w.y - padding) && 
+                          y <= (w.y + approxHeight + padding);
             
             // Hit throttling: Don't hit the same word more than once every 500ms
             if (isHit) {
@@ -287,15 +295,12 @@ const WordNinjaGameScreen = () => {
                  loopRef.current.words.splice(hitIndex, 1); // Remove immediate
 
             } else {
-                // Wrong
-                setLives(l => {
-                    const newLives = l - 1;
-                    if (newLives <= 0) endGame('lost');
-                    return newLives;
-                });
-                playSound('wrong');
+                // Wrong: No penalty, just spoken correction
+                if (settings.enableSound) {
+                    audioEngine.speak(hitWord.text, { rate: 0.85 });
+                }
                 // Push word away hard
-                hitWord.velocity.x = (hitWord.x - x) * 0.5;
+                hitWord.velocity.x = (hitWord.x - x) * 0.8;
                 hitWord.velocity.y = (hitWord.y - y) * 0.5;
             }
         }
@@ -329,15 +334,16 @@ const WordNinjaGameScreen = () => {
 
     return (
         <View style={styles.container} {...panResponder.panHandlers}>
-            <EmotionTracker moduleName="Word Ninja" isActive={true} />
+            <EmotionTracker moduleName="Word Ninja" isActive={!tourVisible} />
+            <BackButton color="#4ADE80" />
+            <InfoButton onPress={() => {
+                loopRef.current.isPlaying = false;
+                setTourVisible(true);
+            }} color="#4ADE80" />
             {/* Header / HUD */}
             <View style={styles.header}>
                 <View style={styles.livesContainer}>
-                    {Array.from({ length: MAX_LIVES }).map((_, i) => (
-                        <Text key={i} style={[styles.heart, { opacity: i < lives ? 1 : 0.2 }]}>
-                            ❤️
-                        </Text>
-                    ))}
+                    {/* Lives removed for Stress-Free Mode */}
                 </View>
                 <Text style={styles.score}>{score}</Text>
                 
@@ -365,16 +371,22 @@ const WordNinjaGameScreen = () => {
             ))}
 
             <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-                 {/* Particles */}
-                 {renderParticles.map(p => (
-                     <Circle key={p.id} cx={p.x} cy={p.y} r={p.size} fill={p.color} opacity={p.life} />
-                 ))}
                  {/* Slice Trail */}
-                 <Path d={slicePath} stroke="#00FFFF" strokeWidth="6" strokeLinecap="round" fill="none" />
+                 <Path d={slicePath} stroke={DT.accent.navy} strokeWidth="6" strokeLinecap="round" fill="none" />
             </Svg>
 
+            {gameState === 'waiting' && (
+                <View style={styles.startOverlay}>
+                    <Text style={styles.startTitle}>Zen Words</Text>
+                    <Text style={styles.startSub}>Pop the correct balloons gently!</Text>
+                    <TouchableOpacity style={styles.startHeroBtn} onPress={startGame}>
+                        <Text style={styles.startHeroText}>START 🚀</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
             {/* Modals */}
-            <Modal visible={gameState !== 'playing'} transparent animationType="fade">
+            <Modal visible={gameState === 'won' || gameState === 'lost'} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
                         <Text style={styles.modalTitle}>
@@ -402,7 +414,7 @@ const WordNinjaGameScreen = () => {
                 steps={tourSteps}
                 onComplete={() => {
                     setTourVisible(false);
-                    loopRef.current.isPlaying = true; // Start game loop after tour
+                    loopRef.current.isPlaying = true; // Resume game loop
                     loop();
                 }}
                 onSkip={() => {
@@ -418,7 +430,7 @@ const WordNinjaGameScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0F172A', // Deep Dojo Blue
+        backgroundColor: DT.bg.cream, 
     },
     header: {
         flexDirection: 'row',
@@ -435,10 +447,10 @@ const styles = StyleSheet.create({
         fontSize: 24,
     },
     score: {
-        fontSize: 32,
-        color: '#FBBF24', // Gold
+        fontSize: 36,
+        color: DT.accent.navy,
         fontWeight: 'bold',
-        fontFamily: 'OpenDyslexic-Regular',
+        fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'OpenDyslexic-Regular',
     },
     speakerBtn: {
         padding: 10,
@@ -496,40 +508,41 @@ const styles = StyleSheet.create({
         borderColor: '#E2E8F0',
     },
     wordText: {
-        fontSize: 24,
+        fontSize: 34,
         fontWeight: 'bold',
-        color: '#0F172A',
-        fontFamily: 'OpenDyslexic-Regular',
+        color: DT.text.primary,
+        fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'OpenDyslexic-Regular',
+        letterSpacing: 2,
     },
     // Modal
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.8)',
+        backgroundColor: 'rgba(255,255,255,0.9)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalCard: {
         width: '80%',
-        backgroundColor: '#1E293B',
-        padding: 30,
-        borderRadius: 25,
+        backgroundColor: DT.surface.card,
+        padding: 40,
+        borderRadius: DT.radius.xl,
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: '#4ADE80',
-        elevation: 20,
+        borderColor: DT.accent.navy,
+        ...DT.shadow.medium,
     },
     modalTitle: {
-        fontSize: 28,
+        fontSize: 32,
         fontWeight: 'bold',
-        color: '#FFF',
+        color: DT.accent.navy,
         marginBottom: 10,
         textAlign: 'center',
-        fontFamily: 'OpenDyslexic-Regular',
+        fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'OpenDyslexic-Regular',
     },
     modalSub: {
-        fontSize: 18,
-        color: '#94A3B8',
-        marginBottom: 30,
+        fontSize: 20,
+        color: DT.text.secondary,
+        marginBottom: 40,
         textAlign: 'center',
     },
     modalBtns: {
@@ -544,21 +557,54 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     btnPri: {
-        backgroundColor: '#4ADE80',
+        backgroundColor: DT.accent.navy,
+        ...DT.shadow.soft
     },
     btnSec: {
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        borderColor: '#94A3B8',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderColor: DT.accent.navy,
     },
     btnTextPri: {
-        color: '#000',
+        color: '#FFFFFF',
         fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 18,
     },
     btnTextSec: {
-        color: '#FFF',
-        fontSize: 16,
+        color: DT.accent.navy,
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    startOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 100,
+    },
+    startTitle: {
+        fontSize: 48,
+        fontWeight: '900',
+        color: DT.accent.navy,
+        fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'OpenDyslexic-Regular',
+        marginBottom: 8,
+    },
+    startSub: {
+        fontSize: 20,
+        color: DT.text.secondary,
+        marginBottom: 40,
+    },
+    startHeroBtn: {
+        backgroundColor: DT.accent.indigo,
+        paddingVertical: 20,
+        paddingHorizontal: 40,
+        borderRadius: DT.radius.pill,
+        ...DT.shadow.medium,
+    },
+    startHeroText: {
+        color: '#FFFFFF',
+        fontSize: 28,
+        fontWeight: 'bold',
     }
 });
 

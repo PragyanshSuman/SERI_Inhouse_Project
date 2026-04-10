@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useEmotion } from '../../../context/EmotionContext';
 import { useAuth } from '../../../context/AuthContext';
 import { fetchEmotionReport } from '../../../services/emotionApiService';
+import BackButton from '../../../components/BackButton';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const EMOTION_EMOJI: Record<string, string> = {
@@ -191,10 +192,10 @@ export default function EmotionReportScreen() {
       <LinearGradient colors={['#0F172A', '#1E293B']} style={StyleSheet.absoluteFillObject} />
 
       {/* Header */}
+      <BackButton color="#A5B4FC" />
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.headerBtnTxt}>← Back</Text>
-        </TouchableOpacity>
+        <View style={{ flex: 1 }} />
         <Text style={styles.headerTitle}>Affective Analytics 🧠</Text>
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
           <Text style={styles.logoutTxt}>Log Out</Text>
@@ -325,8 +326,6 @@ export default function EmotionReportScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 10 },
-  headerBtn: { padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 },
-  headerBtnTxt: { color: '#A5B4FC', fontWeight: 'bold' },
   logoutBtn: { padding: 10, backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 10 },
   logoutTxt: { color: '#F87171', fontWeight: 'bold' },
   headerTitle: { fontSize: 17, fontWeight: '900', color: '#E2E8F0' },

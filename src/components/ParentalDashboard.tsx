@@ -11,6 +11,7 @@ import { useSettings } from '../context/SettingsContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { StorageService } from '../features/phonic-check/services/storageService';
 import { useAuth } from '../context/AuthContext';
+import BackButton from './BackButton';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 const { width } = Dimensions.get('window');
@@ -134,11 +135,9 @@ export default function ParentalDashboard() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <LinearGradient colors={['#1E293B', '#0F172A']} style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-           <Text style={styles.backBtnText}>← Back</Text>
-        </TouchableOpacity>
+        <BackButton color="#FFF" />
         <Text style={styles.headerTitle}>Parental Controls</Text>
-        <View style={{ width: 60 }} />
+        <View style={{ width: 44 }} />
       </LinearGradient>
 
       <ScrollView 
@@ -244,6 +243,7 @@ export default function ParentalDashboard() {
 
             <View style={styles.divider} />
 
+
             <TouchableOpacity 
               style={styles.actionBtn}
               onPress={handleClearData}
@@ -268,8 +268,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 16,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
   },
-  backBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 },
-  backBtnText: { color: '#FFF', fontWeight: '600' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#FFF' },
   scroll: { padding: 16 },
   sectionHeader: { 

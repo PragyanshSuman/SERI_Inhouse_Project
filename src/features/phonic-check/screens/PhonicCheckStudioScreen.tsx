@@ -1,6 +1,6 @@
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   SafeAreaView,
   StatusBar,
@@ -12,13 +12,20 @@ import {
   Alert,
   Animated,
   Easing,
-  ImageBackground
+  ScrollView,
+  Dimensions,
 } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AudioRecorder } from '../services/audioRecorder';
 import { checkPronunciation } from '../services/apiService';
 import { wordDatabase } from '../data/wordDatabase';
+import { phonicsDatabase } from '../../../data/phonicsDatabase';
 import EmotionTracker from '../../../components/EmotionTracker';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
+import { useSettings } from '../../../context/SettingsContext';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 const PhonicCheckStudioScreen = () => {
   const navigation = useNavigation<any>();
@@ -27,6 +34,7 @@ const PhonicCheckStudioScreen = () => {
   // Params from Dashboard (Optional)
   const categoryId = route.params?.categoryId;
   const difficulty = route.params?.difficulty;
+  const mode = route.params?.mode || 'custom';
 
   // State
   const [word, setWord] = useState('');
@@ -38,18 +46,29 @@ const PhonicCheckStudioScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [audioRecorder] = useState(() => new AudioRecorder());
   
-  const BACKGROUND_IMAGE = require('../../letter-tracing/assets/images/background_for_initial_home_screen.png');
+  const [tourVisible, setTourVisible] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  const { settings } = useSettings();
+  const fontStyle = {
+    fontFamily: settings.fontFamily === 'Lexend' ? 'Lexend-Regular' :
+                settings.fontFamily === 'Roboto' ? 'Roboto-Regular' :
+                settings.fontFamily === 'OpenSans' ? 'OpenSans-Regular' :
+                settings.fontFamily === 'AtkinsonHyperlegible' ? 'AtkinsonHyperlegible-Regular' : undefined,
+    letterSpacing: settings.dyslexiaFormattingEnabled ? 32 * 0.35 : undefined,
+    color: settings.themeMode === 'dyslexicDark' ? '#D1D5DB' : '#0F172A',
+  };
+
   useEffect(() => {
-    // If category is passed, load words
-    if (categoryId && difficulty) {
+    if (mode === 'adaptive') {
+       loadAdaptiveWords();
+    } else if (categoryId && difficulty) {
         loadPracticeWords();
     }
     return () => {
       audioRecorder.cleanup();
     };
-  }, [categoryId, difficulty]);
+  }, [categoryId, difficulty, mode]);
 
   useEffect(() => {
     if (isRecording) {
@@ -58,6 +77,18 @@ const PhonicCheckStudioScreen = () => {
       stopPulse();
     }
   }, [isRecording]);
+
+  const loadAdaptiveWords = () => {
+      // Pick Level 1 (CVC) by default for now
+      const level = phonicsDatabase.find(l => l.id === 1);
+      if (level) {
+          const adaptiveArray = level.words.map(w => ({ text: w, difficulty: 'beginner' }));
+          setPracticeWords(adaptiveArray.slice(0, 5)); // Take 5 words
+          setWord(adaptiveArray[0].text);
+          setIsPracticeMode(true);
+          setCurrentIndex(0);
+      }
+  };
 
   const loadPracticeWords = () => {
       const category = wordDatabase.getCategory(categoryId);
@@ -155,15 +186,17 @@ const PhonicCheckStudioScreen = () => {
   };
 
   return (
-    <ImageBackground source={BACKGROUND_IMAGE} style={styles.bg} resizeMode="cover">
-    <EmotionTracker moduleName="Phonic Check" isActive={true} />
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <EmotionTracker moduleName="Phonic Check Studio" isActive={!isRecording && !tourVisible} />
+      <StatusBar barStyle="dark-content" backgroundColor={DT.bg.sage} />
+      <BackButton 
+        onPress={() => navigation.goBack()} 
+        color={DT.accent.navy} 
+      />
+      <InfoButton onPress={() => setTourVisible(true)} color={DT.accent.navy} />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
+        <View style={{ width: 44 }} />
         <View style={styles.titleContainer}>
             <Text style={styles.headerTitle}>
                 {isPracticeMode ? `Practice: ${categoryId?.toUpperCase()}` : 'Magic Check ✨'}
@@ -173,126 +206,84 @@ const PhonicCheckStudioScreen = () => {
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.content}
+        style={styles.keyboardAvoidingView}
       >
-        <View style={styles.card}>
-            {isPracticeMode ? (
-                // PRACTICE MODE UI
-                <View style={styles.practiceContainer}>
-                    <Text style={styles.progressText}>Word {currentIndex + 1} of {practiceWords.length}</Text>
-                    
-                    <View style={styles.wordDisplay}>
-                        <TouchableOpacity onPress={handlePrevWord} disabled={currentIndex === 0}>
-                            <Text style={[styles.navArrow, currentIndex === 0 && styles.navDisabled]}>◀</Text>
-                        </TouchableOpacity>
-                        
-                        <Text style={styles.targetWord}>{word}</Text>
-                        
-                        <TouchableOpacity onPress={handleNextWord} disabled={currentIndex === practiceWords.length - 1}>
-                            <Text style={[styles.navArrow, currentIndex === practiceWords.length - 1 && styles.navDisabled]}>▶</Text>
-                        </TouchableOpacity>
+        <View style={styles.content}>
+            <View style={styles.wordCard}>
+                {isPracticeMode ? (
+                    <View style={styles.practiceContainer}>
+                        <Text style={styles.progressText}>Word {currentIndex + 1} of {practiceWords.length}</Text>
+                        <Text style={styles.wordText}>{word}</Text>
+                        <View style={styles.navRow}>
+                            <TouchableOpacity style={[styles.navButton, currentIndex === 0 && styles.navDisabled]} onPress={handlePrevWord} disabled={currentIndex === 0}>
+                                <Text style={styles.navIcon}>◀</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.navButton, currentIndex === practiceWords.length - 1 && styles.navDisabled]} onPress={handleNextWord} disabled={currentIndex === practiceWords.length - 1}>
+                                <Text style={styles.navIcon}>▶</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                    
-                    <Text style={styles.instructionSmall}>Say this word!</Text>
-                </View>
-            ) : (
-                // FREE MODE UI (Manual Input)
-                <>
-                    <Text style={styles.instruction}>Type a word you want to practice:</Text>
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            value={word}
-                            onChangeText={setWord}
-                            placeholder="e.g. Elephant"
-                            placeholderTextColor="#94A3B8"
-                            editable={!isRecording && !isProcessing}
-                        />
-                    </View>
-                </>
-            )}
-        </View>
+                ) : (
+                    <>
+                        <Text style={styles.instruction}>Type a word you want to practice:</Text>
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={[styles.input, fontStyle as any]}
+                                value={word}
+                                onChangeText={setWord}
+                                placeholder="e.g. Elephant"
+                                placeholderTextColor="#94A3B8"
+                                editable={!isRecording && !isProcessing}
+                            />
+                        </View>
+                    </>
+                )}
+            </View>
 
-        <View style={styles.spacer} />
-
-        <View style={styles.micContainer}>
-            {isRecording && (
-                <Animated.View style={[
-                    styles.pulseRing, 
-                    { transform: [{ scale: pulseAnim }] }
-                ]} />
-            )}
+            <View style={styles.micWrapper}>
+                {isRecording && (
+                    <Animated.View style={[
+                        styles.pulseRing, 
+                        { transform: [{ scale: pulseAnim }] }
+                    ]} />
+                )}
+                
+                <TouchableOpacity
+                style={[
+                    styles.recordButton,
+                    isRecording && styles.recordButtonActive,
+                ]}
+                onPress={handleToggleRecording}
+                disabled={isProcessing}
+                >
+                {isProcessing ? (
+                    <ActivityIndicator size="large" color="#FFFFFF" />
+                ) : (
+                    <Text style={styles.recordIcon}>{isRecording ? '⏹' : '🎤'}</Text>
+                )}
+                </TouchableOpacity>
+            </View>
             
-            <TouchableOpacity
-            style={[
-                styles.recordButton,
-                isRecording && styles.recordButtonActive,
-                isProcessing && styles.recordButtonDisabled
-            ]}
-            onPress={handleToggleRecording}
-            disabled={isProcessing}
-            >
-            {isProcessing ? (
-                <ActivityIndicator size="large" color="#FFFFFF" />
-            ) : (
-                <Text style={styles.recordIcon}>{isRecording ? '⏹' : '🎤'}</Text>
-            )}
-            </TouchableOpacity>
+            <Text style={styles.statusText}>
+              {isProcessing 
+                ? 'Analyzing magic...' 
+                : isRecording 
+                  ? 'Listening... Tap to Stop' 
+                  : 'Tap to Record'}
+            </Text>
         </View>
-        
-        <Text style={styles.statusText}>
-          {isProcessing 
-            ? 'Analyzing magic...' 
-            : isRecording 
-              ? 'Listening... Tap to Stop' 
-              : 'Tap to Record'}
-        </Text>
-
       </KeyboardAvoidingView>
     </SafeAreaView>
-    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  bg: {
-      flex: 1,
-      width: '100%',
-      height: '100%',
-  },
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: DT.bg.sage,
   },
-  header: {
-    padding: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20, 
-  },
-  backButton: {
-    marginRight: 16,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  backText: {
-    fontSize: 16,
-    color: '#4F46E5',
-    fontWeight: '700',
-  },
-  titleContainer: {
-      backgroundColor: 'rgba(255,255,255,0.85)',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#1E293B',
-    textTransform: 'capitalize'
+  keyboardAvoidingView: {
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -300,125 +291,136 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  card: {
-      backgroundColor: 'rgba(255,255,255,0.9)',
-      padding: 24,
-      borderRadius: 24,
-      width: '100%',
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 5,
+  header: {
+    padding: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20, 
+  },
+  titleContainer: {
+      backgroundColor: DT.surface.card,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: DT.radius.md,
+      ...DT.shadow.soft,
+      borderWidth: 1,
+      borderColor: DT.surface.cardBorder,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    textTransform: 'capitalize',
+    letterSpacing: DT.typography.letterSpacingUI,
+  },
+  wordCard: {
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.xl,
+    padding: 32,
+    width: '100%',
+    alignItems: 'center',
+    ...DT.shadow.medium,
+    borderWidth: 2,
+    borderColor: DT.surface.cardBorder,
+  },
+  wordText: {
+    fontSize: 48,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'sans-serif-rounded',
   },
   instruction: {
     fontSize: 18,
-    color: '#64748B',
+    color: DT.text.secondary,
     marginBottom: 24,
     textAlign: 'center',
-    fontWeight: '600',
-  },
-  instructionSmall: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 8,
-    textAlign: 'center',
-    fontStyle: 'italic',
+    fontWeight: DT.typography.weightMedium,
   },
   practiceContainer: {
       width: '100%',
       alignItems: 'center',
   },
-  wordDisplay: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      width: '100%',
-      marginVertical: 16,
-  },
-  targetWord: {
-      fontSize: 40,
-      fontWeight: '800',
-      color: '#1E293B',
-      textTransform: 'capitalize',
-  },
-  navArrow: {
-      fontSize: 32,
-      color: '#4F46E5',
-      padding: 10,
-  },
-  navDisabled: {
-      color: '#CBD5E1',
-  },
   progressText: {
       fontSize: 14,
-      color: '#94A3B8',
-      fontWeight: '700',
+      color: DT.text.muted,
+      fontWeight: DT.typography.weightBold,
       textTransform: 'uppercase',
+      letterSpacing: DT.typography.letterSpacingBody,
   },
   inputContainer: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: DT.surface.input,
+    borderRadius: DT.radius.md,
     padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 4,
+    ...DT.shadow.soft,
+    borderWidth: 1,
+    borderColor: DT.surface.inputBorder,
   },
   input: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: DT.typography.weightBold,
+    color: DT.text.primary,
     textAlign: 'center',
     paddingVertical: 16,
   },
-  spacer: {
-    height: 60,
-  },
-  micContainer: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: 150,
-      height: 150,
+  micWrapper: {
+    marginTop: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pulseRing: {
-      position: 'absolute',
-      width: 140,
-      height: 140,
-      borderRadius: 70,
-      backgroundColor: 'rgba(79, 70, 229, 0.2)', // Light primary color
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(46,74,122,0.1)',
   },
   recordButton: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#4F46E5',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: DT.accent.navy,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
+    ...DT.shadow.medium,
   },
   recordButtonActive: {
-    backgroundColor: '#EF4444',
-  },
-  recordButtonDisabled: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: DT.text.error,
   },
   recordIcon: {
-    fontSize: 40,
-    color: '#FFFFFF',
+    fontSize: 36,
+    color: DT.text.onDark,
   },
   statusText: {
     marginTop: 24,
     fontSize: 16,
-    fontWeight: '600',
-    color: '#64748B',
+    fontWeight: DT.typography.weightMedium,
+    color: DT.text.secondary,
+  },
+  navRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 32,
+  },
+  navButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: DT.surface.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...DT.shadow.soft,
+    borderWidth: 1,
+    borderColor: DT.surface.cardBorder,
+  },
+  navIcon: {
+    fontSize: 24,
+    color: DT.accent.navy,
+  },
+  navDisabled: {
+    opacity: 0.3,
   },
 });
 

@@ -1,6 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Button, ScrollView, Alert, Dimensions, TouchableOpacity } from 'react-native';
-import * as Speech from 'expo-speech';
+import React, { useState, useEffect } from 'react';
+import { 
+    View, 
+    Text, 
+    StyleSheet, 
+    ScrollView, 
+    Alert, 
+    Dimensions, 
+    TouchableOpacity, 
+    StatusBar, 
+    Platform,
+    ActivityIndicator
+} from 'react-native';
 import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
 import { WritingCanvas, Stroke } from '../components/WritingCanvas';
 import { modelService } from '../services/ModelService';
@@ -13,29 +23,28 @@ import {
     rotate180 
 } from '../utils/WritingUtils';
 import EmotionTracker from '../../../components/EmotionTracker';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CANVAS_SIZE = SCREEN_WIDTH - 20; // Reduced margin to increase size
+const CANVAS_SIZE = SCREEN_WIDTH - 40;
 
 const WritingAssessmentScreen = () => {
     const [targetChar, setTargetChar] = useState<string | null>(null);
     const [targetClassId, setTargetClassId] = useState<number | null>(null);
     const [strokes, setStrokes] = useState<Stroke[]>([]);
-    const [canvasKey, setCanvasKey] = useState(0); // To force re-render clear
+    const [canvasKey, setCanvasKey] = useState(0); 
     const [result, setResult] = useState<string>('');
     const [confidence, setConfidence] = useState<number>(0);
     const [timing, setTiming] = useState(0);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
+    const [tourVisible, setTourVisible] = useState(false);
     
     // Stats
     const [stats, setStats] = useState({ total: 0, correct: 0 });
 
     useEffect(() => {
-        // Init TTS - Expo speech needs no explicit init usually
-        // Tts.setDefaultLanguage('en-GB');
-        // Tts.setDefaultRate(0.5);
-        
-        // Init Model
         modelService.loadModel();
         
         let interval: ReturnType<typeof setInterval>;
@@ -48,7 +57,6 @@ const WritingAssessmentScreen = () => {
     }, [isTimerRunning]);
 
     const startNewTest = () => {
-        // Select random character
         const randomIndex = Math.floor(Math.random() * ALPHABET_INDICES.length);
         const classId = ALPHABET_INDICES[randomIndex];
         const char = getCharFromIndex(classId);
@@ -56,13 +64,12 @@ const WritingAssessmentScreen = () => {
         setTargetChar(char);
         setTargetClassId(classId);
         setStrokes([]);
-        setCanvasKey(k => k + 1); // Clear canvas
+        setCanvasKey(k => k + 1);
         setResult('');
         setConfidence(0);
         setTiming(0);
         setIsTimerRunning(true);
         
-        // Speak
         speakPrompt(char);
     };
 
@@ -80,11 +87,7 @@ const WritingAssessmentScreen = () => {
         if (!strokes.length || targetClassId === null) return;
         
         setIsTimerRunning(false);
-        
-        // 1. Rasterize
         const inputTensor = rasterizeStrokes(strokes, CANVAS_SIZE, CANVAS_SIZE);
-        
-        // 2. Predict
         const predictions = await modelService.predict(inputTensor);
         
         if (!predictions) {
@@ -92,7 +95,6 @@ const WritingAssessmentScreen = () => {
             return;
         }
 
-        // 3. Analyze
         const maxProbIndex = predictions.indexOf(Math.max(...predictions));
         const conf = predictions[maxProbIndex];
         const predictedChar = getCharFromIndex(maxProbIndex);
@@ -101,21 +103,15 @@ const WritingAssessmentScreen = () => {
         let feedbackDetails = "";
         
         if (!isCorrect) {
-            // Check for reversals
             const checkReversal = async (transform: (t: Float32Array) => Float32Array, name: string) => {
                 const transformed = transform(inputTensor);
                 const predT = await modelService.predict(transformed);
                 if (predT) {
                     const maxT = predT.indexOf(Math.max(...predT));
-                    if (maxT === targetClassId) {
-                        return name;
-                    }
+                    if (maxT === targetClassId) return name;
                 }
                 return null;
             };
-            
-            // We need to await sequentially or Promise.all
-            // But we can just run them one by one for simplicity
             
             const isMirror = await checkReversal(flipHorizontal, "Mirrored (Horizontal Flip)");
             if (isMirror) feedbackDetails = isMirror;
@@ -129,7 +125,6 @@ const WritingAssessmentScreen = () => {
             }
         }
         
-        // Update Stats
         setStats(prev => ({
             total: prev.total + 1,
             correct: prev.correct + (isCorrect ? 1 : 0)
@@ -150,132 +145,211 @@ const WritingAssessmentScreen = () => {
     };
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <EmotionTracker moduleName="Writing Assessment" isActive={true} />
-            <Text style={styles.title}>Character Writing Test</Text>
-            
-            <View style={styles.statsRow}>
-                <Text style={styles.statText}>Tests: {stats.total}</Text>
-                <Text style={styles.statText}>Correct: {stats.correct}</Text>
-                <Text style={styles.statText}>
-                    Accuracy: {stats.total ? ((stats.correct/stats.total)*100).toFixed(1) : 0}%
-                </Text>
+        <SafeAreaView style={styles.safeArea}>
+            <EmotionTracker moduleName="Writing Assessment" isActive={!tourVisible} />
+            <StatusBar barStyle="dark-content" backgroundColor={DT.bg.cream} />
+            <View style={styles.topNav}>
+              <BackButton color={DT.accent.navy} />
+              <InfoButton onPress={() => setTourVisible(true)} color={DT.accent.navy} />
             </View>
 
-            <View style={styles.infoBox}>
-                <Text style={styles.promptText}>
-                    {targetChar ? `Target: ${targetChar}` : "Press Start"}
-                </Text>
-                <Text style={styles.timerText}>{timing.toFixed(1)}s</Text>
-            </View>
-
-            <WritingCanvas 
-                key={canvasKey}
-                width={CANVAS_SIZE} 
-                height={CANVAS_SIZE} 
-                onStrokesChanged={setStrokes} 
-            />
-            
-            <View style={styles.controls}>
-                <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={startNewTest}>
-                    <Text style={styles.btnText}>New Character</Text>
-                </TouchableOpacity>
+            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+                <Text style={styles.title}>Writing Challenge ✍️</Text>
                 
-                <TouchableOpacity 
-                    style={[styles.btn, styles.btnBlue, (!targetChar || strokes.length === 0) && styles.btnDisabled]} 
-                    onPress={checkAnswer}
-                    disabled={!targetChar || strokes.length === 0}
-                >
-                    <Text style={styles.btnText}>Check Answer</Text>
-                </TouchableOpacity>
-            </View>
-
-             <View style={styles.controls}>
-                <TouchableOpacity style={[styles.btn, styles.btnOrange]} onPress={() => setCanvasKey(k => k + 1)}>
-                    <Text style={styles.btnText}>Clear</Text>
-                </TouchableOpacity>
-                 <TouchableOpacity style={[styles.btn, styles.btnPurple]} onPress={() => targetChar && speakPrompt(targetChar)}>
-                    <Text style={styles.btnText}>Replay Audio</Text>
-                </TouchableOpacity>
-            </View>
-
-            {result ? (
-                <View style={styles.resultBox}>
-                    <Text style={[styles.resultText, result === "CORRECT!" ? styles.green : styles.red]}>
-                        {result}
-                    </Text>
-                    <Text>Confidence: {(confidence * 100).toFixed(1)}%</Text>
+                <View style={styles.statsCard}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statLabel}>Tests</Text>
+                        <Text style={styles.statValue}>{stats.total}</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statLabel}>Correct</Text>
+                        <Text style={[styles.statValue, { color: DT.text.success }]}>{stats.correct}</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statLabel}>Accuracy</Text>
+                        <Text style={styles.statValue}>{stats.total ? ((stats.correct/stats.total)*100).toFixed(0) : 0}%</Text>
+                    </View>
                 </View>
-            ) : null}
-            
-        </ScrollView>
+
+                <View style={styles.promptCard}>
+                    <Text style={styles.promptSubtext}>Write the letter:</Text>
+                    <Text style={styles.targetChar}>{targetChar || "?"}</Text>
+                    <Text style={styles.timerText}>{timing.toFixed(1)}s</Text>
+                </View>
+
+                <View style={styles.canvasWrapper}>
+                    <WritingCanvas 
+                        key={canvasKey}
+                        width={CANVAS_SIZE} 
+                        height={CANVAS_SIZE} 
+                        onStrokesChanged={setStrokes} 
+                    />
+                </View>
+                
+                <View style={styles.controlsGrid}>
+                    <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={startNewTest}>
+                        <Text style={styles.btnText}>New Test</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        style={[styles.btn, styles.btnBlue, (!targetChar || strokes.length === 0) && styles.btnDisabled]} 
+                        onPress={checkAnswer}
+                        disabled={!targetChar || strokes.length === 0}
+                    >
+                        <Text style={styles.btnText}>Check Answer</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={[styles.btn, styles.btnOrange]} onPress={() => setCanvasKey(k => k + 1)}>
+                        <Text style={styles.btnText}>Clear</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={[styles.btn, styles.btnPurple]} onPress={() => targetChar && speakPrompt(targetChar)}>
+                        <Text style={styles.btnText}>Replay Audio</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {result ? (
+                    <View style={styles.resultCard}>
+                        <Text style={[styles.resultTitle, result === "CORRECT!" ? { color: DT.text.success } : { color: DT.text.error }]}>
+                            {result}
+                        </Text>
+                        <Text style={styles.confidenceText}>Model Confidence: {(confidence * 100).toFixed(1)}%</Text>
+                    </View>
+                ) : null}
+            </ScrollView>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        padding: 5, // Reduced padding
-        alignItems: 'center',
-        paddingBottom: 20,
+    safeArea: {
+        flex: 1,
+        backgroundColor: DT.bg.cream,
     },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-    },
-    statsRow: {
+    topNav: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        paddingHorizontal: 8,
+        paddingTop: 8,
+    },
+    container: {
+        padding: 20,
+        alignItems: 'center',
+        paddingBottom: 40,
+    },
+    title: {
+        fontSize: 32,
+        fontWeight: DT.typography.weightHeavy,
+        color: DT.text.primary,
+        fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'sans-serif-rounded',
+        marginBottom: 24,
+        textAlign: 'center',
+    },
+    statsCard: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
         width: '100%',
-        marginBottom: 10,
+        backgroundColor: DT.surface.card,
+        borderRadius: DT.radius.lg,
+        padding: 16,
+        marginBottom: 20,
+        ...DT.shadow.soft,
+        borderWidth: 1,
+        borderColor: DT.surface.cardBorder,
     },
-    statText: {
-        fontSize: 14,
-        color: '#666',
-    },
-    infoBox: {
-        marginBottom: 10,
+    statItem: {
         alignItems: 'center',
     },
-    promptText: {
+    statLabel: {
+        fontSize: 12,
+        color: DT.text.muted,
+        fontWeight: DT.typography.weightBold,
+        textTransform: 'uppercase',
+    },
+    statValue: {
         fontSize: 20,
-        fontWeight: 'bold',
+        fontWeight: DT.typography.weightHeavy,
+        color: DT.text.primary,
+    },
+    promptCard: {
+        backgroundColor: DT.bg.sage,
+        width: '100%',
+        borderRadius: DT.radius.xl,
+        padding: 24,
+        alignItems: 'center',
+        marginBottom: 20,
+        ...DT.shadow.soft,
+    },
+    promptSubtext: {
+        fontSize: 16,
+        color: DT.text.secondary,
+        fontWeight: DT.typography.weightMedium,
+    },
+    targetChar: {
+        fontSize: 72,
+        fontWeight: DT.typography.weightHeavy,
+        color: DT.accent.navy,
+        marginVertical: 4,
     },
     timerText: {
         fontSize: 14,
-        color: '#333',
+        color: DT.text.muted,
+        fontWeight: DT.typography.weightBold,
     },
-    controls: {
+    canvasWrapper: {
+        borderRadius: DT.radius.lg,
+        overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: DT.surface.cardBorder,
+        backgroundColor: DT.surface.card,
+        ...DT.shadow.medium,
+    },
+    controlsGrid: {
         flexDirection: 'row',
-        marginTop: 20,
-        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+        gap: 12,
         width: '100%',
+        marginTop: 24,
     },
     btn: {
-        padding: 15,
-        borderRadius: 8,
-        minWidth: 120,
+        flex: 1,
+        minWidth: '45%',
+        paddingVertical: 16,
+        borderRadius: DT.radius.md,
         alignItems: 'center',
+        ...DT.shadow.soft,
     },
     btnText: {
-        color: 'white',
-        fontWeight: 'bold',
+        color: DT.text.onDark,
+        fontWeight: DT.typography.weightBold,
+        fontSize: 15,
     },
-    btnGreen: { backgroundColor: '#4CAF50' },
-    btnBlue: { backgroundColor: '#2196F3' },
-    btnOrange: { backgroundColor: '#FF9800' },
-    btnPurple: { backgroundColor: '#9C27B0' },
-    btnDisabled: { backgroundColor: '#ccc' },
-    resultBox: {
-        marginTop: 20,
+    btnGreen: { backgroundColor: DT.text.success },
+    btnBlue: { backgroundColor: DT.accent.sky },
+    btnOrange: { backgroundColor: DT.accent.amber },
+    btnPurple: { backgroundColor: DT.accent.indigo },
+    btnDisabled: { backgroundColor: DT.bg.stone, opacity: 0.5 },
+    resultCard: {
+        marginTop: 32,
+        width: '100%',
+        backgroundColor: DT.surface.card,
+        borderRadius: DT.radius.lg,
+        padding: 20,
         alignItems: 'center',
+        ...DT.shadow.soft,
+        borderWidth: 1,
+        borderColor: DT.surface.cardBorder,
     },
-    resultText: {
-        fontSize: 22,
-        fontWeight: 'bold',
+    resultTitle: {
+        fontSize: 28,
+        fontWeight: DT.typography.weightHeavy,
+        marginBottom: 4,
     },
-    green: { color: 'green' },
-    red: { color: 'red' },
+    confidenceText: {
+        fontSize: 14,
+        color: DT.text.muted,
+        fontWeight: DT.typography.weightMedium,
+    },
 });
 
 export default WritingAssessmentScreen;

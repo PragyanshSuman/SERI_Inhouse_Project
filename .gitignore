@@ -44,3 +44,6 @@ yarn-error.*
 backend/venv/
 backend/__pycache__/
 backend/**/*.pyc
+dylexia_ml/
+backend/ml_training/data/
+backend/ml_training/*.pth

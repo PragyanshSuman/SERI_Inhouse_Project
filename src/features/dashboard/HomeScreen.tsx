@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Modal, ImageBackground, Dimensions, Switch } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Modal, Dimensions, Switch } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useSettings, Language } from '../../context/SettingsContext'; // Updated import
 import { getTranslation } from '../../utils/Translations';
+import { useAuth } from '../../context/AuthContext';
 import EmotionTracker from '../../components/EmotionTracker';
-
 import { navigationRef } from '../../navigation/navigationRef';
+import { DT } from '../../utils/DyslexiaTheme';
+import { useLearningPath } from '../learning-path/context/LearningPathContext';
 
-const BG_IMAGE = require('../../assets/images/dashboard_bg.png');
+
 const { width } = Dimensions.get('window');
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -19,6 +22,8 @@ export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { settings } = useSettings(); 
   const { language } = settings;
+  const { username } = useAuth();
+  const { dailyLesson, streakDays, isTodayComplete, totalXP } = useLearningPath();
 
   const renderSectionHeader = (title: string) => (
     <View style={styles.sectionHeader}>
@@ -28,7 +33,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <ImageBackground source={BG_IMAGE} style={styles.bg} resizeMode="cover">
+    <View style={styles.bg}>
       <EmotionTracker moduleName="Home Dashboard" isActive={true} />
       <SafeAreaView style={styles.container}>
         {/* Header */}
@@ -41,7 +46,9 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
             <Text style={styles.title}>{getTranslation(language, 'home_title')}</Text>
-            <Text style={styles.subtitle}>{getTranslation(language, 'home_subtitle')}</Text>
+            <Text style={styles.subtitle}>
+              {username ? `Hello, ${username}! Ready to learn?` : getTranslation(language, 'home_subtitle')}
+            </Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity 
@@ -55,7 +62,9 @@ export default function HomeScreen() {
               <Text style={styles.settingsIcon}>⚙️</Text>
             </TouchableOpacity>
             <View style={styles.avatarMini}>
-               <Text style={styles.avatarMiniText}>L</Text>
+               <Text style={styles.avatarMiniText}>
+                 {username ? username.charAt(0).toUpperCase() : 'L'}
+               </Text>
             </View>
           </View>
         </View>
@@ -64,34 +73,71 @@ export default function HomeScreen() {
           contentContainerStyle={styles.menuScroll}
           showsVerticalScrollIndicator={false}
         >
+          {/* ── DysPath Hero Banner ── */}
+          <TouchableOpacity
+            style={styles.dysPathHero}
+            onPress={() => (navigation as any).navigate('LearningPath')}
+            activeOpacity={0.88}
+          >
+            <LinearGradient
+              colors={isTodayComplete ? ['#166534', '#14532D'] : ['#3730A3', '#1E1B4B']}
+              style={styles.dysPathGradient}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.dysPathLeft}>
+                <Text style={styles.dysPathLabel}>
+                  {isTodayComplete ? '✅ Today Complete!' : '⚡ My Learning Path'}
+                </Text>
+                <Text style={styles.dysPathCount}>
+                  {isTodayComplete
+                    ? `+${totalXP} XP earned today`
+                    : dailyLesson
+                    ? `${dailyLesson.nodeIds.length} activities ready`
+                    : 'Start your journey!'}
+                </Text>
+              </View>
+              <View style={styles.dysPathRight}>
+                {streakDays > 0 && (
+                  <View style={styles.dysPathStreak}>
+                    <Text style={styles.dysPathStreakFire}>🔥</Text>
+                    <Text style={styles.dysPathStreakNum}>{streakDays}</Text>
+                  </View>
+                )}
+                <View style={[styles.dysPathBtn, isTodayComplete && { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                  <Text style={styles.dysPathBtnText}>{isTodayComplete ? 'View →' : 'Go →'}</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
           {renderSectionHeader("Daily Learning")}
           <View style={styles.menuGrid}>
             <MenuCard
               title={getTranslation(language, 'module_letter_tracing')}
               subtitle="Master the alphabet"
               icon="🔤"
-              color="#4F46E5"
+              color={DT.accent.indigo}
               onPress={() => navigation.navigate('LetterTracing')} 
             />
             <MenuCard
               title={getTranslation(language, 'module_phonic_check')}
               subtitle="Practice speaking"
               icon="🎤"
-              color="#10B981"
-              onPress={() => navigation.navigate('PhonicCheck')}
+              color={DT.accent.teal}
+              onPress={() => navigation.navigate('ModeSelection', { toolType: 'pronunciation' })}
             />
             <MenuCard
               title={getTranslation(language, 'module_phonics_phonemes')}
               subtitle="Magic Word Studio"
               icon="✨"
-              color="#D97706"
-              onPress={() => navigation.navigate('PhonicsPhonemes')}
+              color={DT.accent.amber}
+              onPress={() => navigation.navigate('ModeSelection', { toolType: 'magic_words' })}
             />
              <MenuCard
               title={getTranslation(language, 'module_original_app')}
               subtitle="Writing Assessment"
               icon="🏆"
-              color="#2b5876"
+              color={DT.accent.navy}
               onPress={() => navigation.navigate('OriginalApp')}
             />
           </View>
@@ -102,21 +148,21 @@ export default function HomeScreen() {
               title={getTranslation(language, 'module_word_ninja')}
               subtitle="Fast-paced slicing"
               icon="🥷"
-              color="#F43F5E"
+              color={DT.accent.rose}
               onPress={() => navigation.navigate('SightWordsDashboard')}
             />
              <MenuCard
               title={getTranslation(language, 'module_rhyme_time')}
               subtitle="Find matching words"
               icon="🎵"
-              color="#8B5CF6"
+              color={DT.accent.violet}
               onPress={() => navigation.navigate('RhymeDashboard')}
             />
             <MenuCard
               title={getTranslation(language, 'module_visual_discrimination')}
               subtitle="Train your brain"
               icon="🧠"
-              color="#0EA5E9"
+              color={DT.accent.sky}
               onPress={() => navigation.navigate('VisualDiscriminationDashboard')}
             />
           </View>
@@ -127,14 +173,14 @@ export default function HomeScreen() {
               title="Activity Charts"
               subtitle="Your emotions"
               icon="📈"
-              color="#3B82F6" 
+              color={DT.accent.sky}
               onPress={() => navigation.navigate('EmotionReport' as any)}
             />
             <MenuCard
               title="Learning Journey"
               subtitle="Detailed Report"
               icon="📄"
-              color="#059669" 
+              color={DT.accent.teal}
               onPress={() => navigation.navigate('LearningJourneyReport' as any)}
             />
           </View>
@@ -142,7 +188,7 @@ export default function HomeScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -197,7 +243,7 @@ function MenuCard({
 const styles = StyleSheet.create({
   bg: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: DT.bg.cream,
   },
   container: {
     flex: 1,
@@ -208,21 +254,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: DT.bg.cream,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: DT.surface.divider,
   },
   menuButton: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: '#EEF2FF',
+    borderRadius: DT.radius.md,
+    backgroundColor: DT.bg.lavender,
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuIcon: {
     fontSize: 24,
-    color: '#4F46E5',
+    color: DT.accent.indigo,
   },
   headerTextContainer: {
     flex: 1,
@@ -230,27 +276,29 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '900',
-    color: '#1E293B',
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    letterSpacing: DT.typography.letterSpacingUI,
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
+    color: DT.text.secondary,
+    fontWeight: DT.typography.weightMedium,
+    lineHeight: DT.typography.lineHeightBody,
   },
   avatarMini: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4F46E5',
+    backgroundColor: DT.accent.indigo,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FFF',
-    elevation: 4,
+    borderColor: DT.bg.cream,
+    elevation: 3,
   },
   avatarMiniText: {
-    color: '#FFF',
+    color: DT.text.onDark,
     fontWeight: 'bold',
     fontSize: 18,
   },
@@ -263,11 +311,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: DT.bg.stone,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: DT.surface.cardBorder,
   },
   settingsIcon: {
     fontSize: 20,
@@ -280,17 +328,17 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   sectionHeaderText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.muted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     marginRight: 15,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: DT.surface.divider,
   },
   menuScroll: {
     paddingBottom: 20,
@@ -304,14 +352,9 @@ const styles = StyleSheet.create({
   },
   card: {
     width: (width - 45) / 2,
-    borderRadius: 20,
-    backgroundColor: '#FFF',
-    // Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    borderRadius: DT.radius.xl,
+    backgroundColor: DT.surface.card,
+    ...DT.shadow.soft,
     overflow: 'hidden',
   },
   cardGradient: {
@@ -322,7 +365,7 @@ const styles = StyleSheet.create({
   cardIconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: DT.radius.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -335,14 +378,16 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 15,
-    fontWeight: '800',
-    color: '#1E293B',
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    letterSpacing: DT.typography.letterSpacingBody,
   },
   cardSubtitle: {
     fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-    fontWeight: '500',
+    color: DT.text.secondary,
+    marginTop: 3,
+    fontWeight: DT.typography.weightMedium,
+    lineHeight: 18,
   },
   cardArrow: {
     marginLeft: 4,
@@ -358,4 +403,49 @@ const styles = StyleSheet.create({
   lockText: {
     fontSize: 12,
   },
+
+  // ── DysPath Hero Banner ──────────────────────────────────────────────────
+  dysPathHero: {
+    marginHorizontal: 15,
+    marginTop: 16,
+    marginBottom: 4,
+    borderRadius: 20,
+    overflow: 'hidden',
+    ...DT.shadow.medium,
+  },
+  dysPathGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 18,
+    gap: 12,
+  },
+  dysPathLeft: { flex: 1 },
+  dysPathLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  dysPathCount: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  dysPathRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dysPathStreak: { alignItems: 'center' },
+  dysPathStreakFire: { fontSize: 20 },
+  dysPathStreakNum: { color: '#FCD34D', fontWeight: '800', fontSize: 13, marginTop: -2 },
+  dysPathBtn: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  dysPathBtnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

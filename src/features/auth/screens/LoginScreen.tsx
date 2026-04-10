@@ -19,7 +19,7 @@ export default function LoginScreen({ navigation }: any) {
     setIsLoading(true);
     try {
       const data = await loginUser(username, password);
-      await login(data.access_token);
+      await login(data.access_token, username);
     } catch (error: any) {
       console.error(error);
       if (error.message?.includes('Network') || error.message?.includes('fetch')) {

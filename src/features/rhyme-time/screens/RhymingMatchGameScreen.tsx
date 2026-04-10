@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Easing } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated, Dimensions, Easing } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { useNavigation } from '@react-navigation/native';
 import * as Speech from 'expo-speech';
 import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
@@ -10,7 +11,10 @@ import { generateMatchRound, MatchRound } from '../utils/RhymeGenerator';
 import Svg, { Circle } from 'react-native-svg';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { getTranslation } from '../../../utils/Translations';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
 import EmotionTracker from '../../../components/EmotionTracker';
+import { recordRhymeTime } from '../../learning-path/services/PathProgressBridge';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,6 +39,9 @@ const RhymingMatchGameScreen = () => {
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
     const [feedback, setFeedback] = useState<'none' | 'correct' | 'wrong'>('none');
+    const sessionCorrect = useRef(0);
+    const sessionTotal = useRef(0);
+    const sessionStart = useRef(Date.now());
     
     // Animations
     const mascotScale = useRef(new Animated.Value(1)).current;
@@ -46,7 +53,7 @@ const RhymingMatchGameScreen = () => {
     const [particles, setParticles] = useState<Particle[]>([]);
     const frameId = useRef<number>(0);
 
-    const [tourVisible, setTourVisible] = useState(true);
+    const [tourVisible, setTourVisible] = useState(false);
 
     const tourSteps: TourStep[] = [
         {
@@ -129,24 +136,28 @@ const RhymingMatchGameScreen = () => {
             const newCombo = combo + 1;
             setCombo(newCombo);
             setScore(s => s + (10 * newCombo));
-            
+            sessionCorrect.current += 1;
+            sessionTotal.current += 1;
             spawnConfetti(px, py);
-            
-            // Mascot Reaction
+
+            // Every 5 correct answers, flush a progress record
+            if (sessionCorrect.current % 5 === 0) {
+              const accuracy = Math.round((sessionCorrect.current / Math.max(1, sessionTotal.current)) * 100);
+              const secs = Math.round((Date.now() - sessionStart.current) / 1000);
+              recordRhymeTime(accuracy, secs);
+            }
+
             Animated.sequence([
                 Animated.timing(mascotRotate, { toValue: 1, duration: 200, useNativeDriver: true }),
                 Animated.spring(mascotRotate, { toValue: 0, useNativeDriver: true })
             ]).start();
 
-            // Sfx only (no speech) or minimal pleasant ping? 
-            // For now, silence the "You're on fire" speech.
-            
             setTimeout(() => startNewRound(), 1500);
         } else {
             // Wrong
             setFeedback('wrong');
             setCombo(0);
-            // Silence the "Scratch that" speech.
+            sessionTotal.current += 1;
             
             // Shake Card
             Animated.sequence([
@@ -220,10 +231,9 @@ const RhymingMatchGameScreen = () => {
             <LinearGradient colors={['#312E81', '#1E1B4B']} style={StyleSheet.absoluteFill} />
             
             {/* Header */}
+            <BackButton color="#FFF" />
+            <InfoButton onPress={() => setTourVisible(true)} color="#FFF" />
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Text style={styles.backText}>←</Text>
-                </TouchableOpacity>
                 <View style={styles.scoreContainer}>
                     <Text style={styles.scoreTitle}>{getTranslation(settings.language, 'game_score_hype')}</Text>
                     <Text style={styles.score}>{score}</Text>
@@ -304,8 +314,12 @@ const RhymingMatchGameScreen = () => {
             <FeatureTour
                 visible={tourVisible}
                 steps={tourSteps}
-                onComplete={() => setTourVisible(false)}
-                onSkip={() => setTourVisible(false)}
+                onComplete={() => {
+                    setTourVisible(false);
+                }}
+                onSkip={() => {
+                    setTourVisible(false);
+                }}
             />
         </View>
     );
@@ -321,11 +335,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         zIndex: 10,
     },
-    backBtn: { padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 },
-    backText: { color: '#FFF', fontSize: 24 },
     scoreContainer: { alignItems: 'center' },
-    scoreTitle: { color: '#818CF8', fontSize: 10, fontWeight: 'bold', letterSpacing: 2 },
-    score: { color: '#FFF', fontSize: 24, fontWeight: 'bold', fontFamily: 'OpenDyslexic-Regular' },
+    scoreTitle: { color: '#818CF8', fontSize: 10, fontWeight: 'bold', letterSpacing: 2, textAlign: 'center' },
+    score: { color: '#FFF', fontSize: 24, fontWeight: 'bold', textAlign: 'center' },
     comboBadge: { backgroundColor: '#F59E0B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, transform: [{rotate: '-5deg'}] },
     comboText: { color: '#FFF', fontWeight: 'bold', fontSize: 12 },
 
@@ -359,9 +371,9 @@ const styles = StyleSheet.create({
         shadowRadius: 20,
         minWidth: 200,
     },
-    promptText: { fontSize: 18, color: '#333', marginBottom: 5, fontFamily: 'OpenDyslexic-Regular' },
-    targetEmoji: { fontSize: 50 },
-    tapHint: { fontSize: 10, color: '#666', marginTop: 5 },
+    promptText: { fontSize: 18, color: '#333', marginBottom: 5, textAlign: 'center' },
+    targetEmoji: { fontSize: 50, textAlign: 'center' },
+    tapHint: { fontSize: 10, color: '#666', marginTop: 5, textAlign: 'center' },
 
     deck: {
         flexDirection: 'row',
@@ -389,8 +401,8 @@ const styles = StyleSheet.create({
          borderWidth: 2,
          borderStyle: 'dashed',
     },
-    cardEmoji: { fontSize: 40 },
-    cardLabel: { fontSize: 18, color: '#FFF', marginTop: 10, fontWeight: 'bold', fontFamily: 'OpenDyslexic-Regular' },
+    cardEmoji: { fontSize: 40, textAlign: 'center' },
+    cardLabel: { fontSize: 18, color: '#FFF', marginTop: 10, fontWeight: 'bold', textAlign: 'center' },
 });
 
 export default RhymingMatchGameScreen;

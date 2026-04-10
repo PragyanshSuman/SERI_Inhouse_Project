@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
@@ -18,15 +17,19 @@ import {
   ScrollView,
   Dimensions
 } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { AudioRecorder } from '../services/audioRecorder';
 import { checkPronunciation } from '../services/apiService';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
-import { useLanguage } from '../../../context/SettingsContext';
+import { useLanguage, useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
 import EmotionTracker from '../../../components/EmotionTracker';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 const { width } = Dimensions.get('window');
 
@@ -35,7 +38,8 @@ type HomeScreenProps = {
 };
 
 const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { language } = useLanguage();
+  const { settings } = useSettings();
+  const { language } = settings;
   // Logic from Studio
   const [word, setWord] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -45,8 +49,18 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Animation Values
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // Tour State
-  const [tourVisible, setTourVisible] = useState(true); // Show by default for now
+  // Font Map Override for TextInput Context isolation
+  const fontStyle = {
+    fontFamily: settings.fontFamily === 'Lexend' ? 'Lexend-Regular' :
+                settings.fontFamily === 'Roboto' ? 'Roboto-Regular' :
+                settings.fontFamily === 'OpenSans' ? 'OpenSans-Regular' :
+                settings.fontFamily === 'AtkinsonHyperlegible' ? 'AtkinsonHyperlegible-Regular' : undefined,
+    letterSpacing: settings.dyslexiaFormattingEnabled ? 32 * 0.35 : undefined,
+    color: settings.themeMode === 'dyslexicDark' ? '#D1D5DB' : '#0F172A',
+  };
+
+  // Feature Tour State
+  const [tourVisible, setTourVisible] = useState(false);
   
   const tourSteps = [
       {
@@ -73,7 +87,6 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const handleTourComplete = () => {
       setTourVisible(false);
-      // TODO: Save to AsyncStorage so it doesn't show again
   };
 
   useEffect(() => {
@@ -157,8 +170,13 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <EmotionTracker moduleName="Magic Check Dashboard" isActive={!tourVisible} />
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <EmotionTracker moduleName="Phonic Check" isActive={!tourVisible} />
+      <StatusBar barStyle="dark-content" backgroundColor={DT.bg.sage} />
+      <BackButton 
+        onPress={() => navigation.goBack()} 
+        color={DT.accent.navy} 
+      />
+      <InfoButton onPress={() => setTourVisible(true)} color={DT.accent.navy} />
       
       <View style={styles.headerContainer}>
         <Text style={styles.title}>{getTranslation(language, 'magic_check_title')}</Text>
@@ -179,7 +197,7 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
                   
                   <View style={styles.inputContainer}>
                   <TextInput
-                      style={styles.input}
+                      style={[styles.input, fontStyle as any]}
                       value={word}
                       onChangeText={setWord}
                       placeholder={getTranslation(language, 'magic_input_placeholder')}
@@ -240,37 +258,36 @@ const PhonicCheckDashboard: React.FC<HomeScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: DT.bg.sage,
   },
   headerContainer: {
     paddingTop: 60,
     paddingBottom: 30,
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: DT.surface.card,
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
     alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#1A237E',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
+    ...DT.shadow.medium,
+    borderBottomWidth: 1,
+    borderBottomColor: DT.surface.cardBorder,
     marginBottom: 24,
     zIndex: 10,
   },
   title: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#283593',
+    fontSize: 32,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.accent.navy,
     marginBottom: 4,
-    letterSpacing: -0.5,
+    letterSpacing: DT.typography.letterSpacingUI,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#7986CB',
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontSize: 15,
+    color: DT.text.secondary,
+    fontWeight: DT.typography.weightMedium,
+    letterSpacing: DT.typography.letterSpacingBody,
     textAlign: 'center',
+    lineHeight: DT.typography.lineHeightBody,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -280,39 +297,39 @@ const styles = StyleSheet.create({
       alignItems: 'center',
   },
   card: {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: DT.surface.card,
       padding: 24,
-      borderRadius: 24,
+      borderRadius: DT.radius.xl,
       width: '90%',
       alignItems: 'center',
-      shadowColor: '#303F9F',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 4,
+      ...DT.shadow.soft,
+      borderWidth: 1,
+      borderColor: DT.surface.cardBorder,
       marginTop: 20,
   },
   instruction: {
-    fontSize: 18,
-    color: '#5C6BC0', 
+    fontSize: 17,
+    color: DT.text.secondary,
     marginBottom: 16,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: DT.typography.weightMedium,
+    lineHeight: DT.typography.lineHeightBody,
   },
   inputContainer: {
     width: '100%',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 16,
+    backgroundColor: DT.surface.input,
+    borderRadius: DT.radius.md,
     padding: 4,
     borderWidth: 2,
-    borderColor: '#E8EAF6',
+    borderColor: DT.surface.inputBorder,
   },
   input: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#283593',
+    fontWeight: DT.typography.weightBold,
+    color: DT.text.primary,
     textAlign: 'center',
     paddingVertical: 12,
+    letterSpacing: 1.5,
   },
   micWrapper: {
       alignItems: 'center',
@@ -330,36 +347,33 @@ const styles = StyleSheet.create({
       width: 140,
       height: 140,
       borderRadius: 70,
-      backgroundColor: 'rgba(63, 81, 181, 0.2)', // Indigo 500 equivalent
+      backgroundColor: 'rgba(46,74,122,0.1)',
   },
   recordButton: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#3F51B5', // Indigo 500
+    backgroundColor: DT.accent.navy,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#303F9F',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    ...DT.shadow.medium,
   },
   recordButtonActive: {
-    backgroundColor: '#F44336', // Red
+    backgroundColor: DT.text.error,
   },
   recordButtonDisabled: {
-    backgroundColor: '#9FA8DA',
+    backgroundColor: DT.text.muted,
   },
   recordIcon: {
     fontSize: 36,
-    color: '#FFFFFF',
+    color: DT.text.onDark,
   },
   statusText: {
     marginTop: 16,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#5C6BC0', 
+    fontSize: 15,
+    fontWeight: DT.typography.weightMedium,
+    color: DT.text.secondary,
+    letterSpacing: DT.typography.letterSpacingBody,
   },
 });
 

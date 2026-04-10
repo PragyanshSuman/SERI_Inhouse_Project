@@ -20,6 +20,8 @@ import { AudioRecorder } from '../services/audioRecorder';
 import { TTSService } from '../services/ttsService';
 import { StorageService } from '../services/storageService';
 import { useAuth } from '../../../context/AuthContext';
+import { useSettings } from '../../../context/SettingsContext';
+import InfoButton from '../../../components/InfoButton';
 
 import { AudioProcessor } from '../utils/audioProcessor';
 import { MFCCExtractor } from '../utils/mfccExtractor';
@@ -72,8 +74,9 @@ const PracticeScreen: React.FC<PracticeScreenProps> = ({ navigation, route }) =>
   const [recognitionResult, setRecognitionResult] = useState<RecognitionResult | null>(null);
   const [nativeResult, setNativeResult] = useState<string | null>(null);
   
+  const { settings } = useSettings();
   // Tour State
-  const [tourVisible, setTourVisible] = useState(true);
+  const [tourVisible, setTourVisible] = useState(false);
 
   const tourSteps = [
       {
@@ -351,7 +354,7 @@ const PracticeScreen: React.FC<PracticeScreenProps> = ({ navigation, route }) =>
             <Text style={styles.backButton}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Practice</Text>
-          <View style={{ width: 60 }} />
+          <InfoButton onPress={() => setTourVisible(true)} color={colors.primary} />
         </View>
 
         {/* Word Display */}

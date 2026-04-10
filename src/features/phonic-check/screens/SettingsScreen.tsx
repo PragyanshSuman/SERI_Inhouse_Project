@@ -1,32 +1,30 @@
-// src/screens/SettingsScreen.tsx - App settings screen
+// src/features/phonic-check/screens/SettingsScreen.tsx
 
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  StatusBar,
   TouchableOpacity,
   Switch,
-  ImageBackground,
+  Platform,
 } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors, fonts, globalStyles } from '../theme';
+import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { StorageService } from '../services/storageService';
 import { useAuth } from '../../../context/AuthContext';
+import { useSettings as useGlobalSettings } from '../../../context/SettingsContext';
 import { TTSService } from '../services/ttsService';
 
 import { AppSettings } from '../types';
 import ParentalGateModal from '../../../components/ParentalGateModal';
-import { navigationRef } from '../../../navigation/navigationRef';
-
-type RootStackParamList = {
-  Home: undefined;
-  Settings: undefined;
-  MedicalReport: undefined;
-  ParentalDashboard: undefined;
-};
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
+import EmotionTracker from '../../../components/EmotionTracker';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 
@@ -48,17 +46,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
     highContrast: false,
     fontSize: 'large',
     difficultyLevel: 'beginner',
-  } as AppSettings); // Suppress type mismatch since AppSettings global format was updated earlier
+  } as AppSettings);
 
   const auth = useAuth() as any;
   const currentUserId = auth?.userId || null;
   const storageService = new StorageService(currentUserId);
   const ttsService = new TTSService();
 
-  const [showParentalGate, setShowParentalGate] = useState(false);
+  // Access the explicit global Dyslexia configuration overrides
+  const { settings: globalSettings, updateSettings: updateGlobalSettings } = useGlobalSettings();
 
-  // Shared background
-  const BACKGROUND_IMAGE = require('../../letter-tracing/assets/images/background_for_initial_home_screen.png');
+  const [showParentalGate, setShowParentalGate] = useState(false);
+  const [tourVisible, setTourVisible] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -90,7 +89,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
     await saveSettings(newSettings);
   };
 
-  // Note: Difficulty Floor/Ceiling constraints should ideally happen elsewhere, but keeping the setter alive for children until maxed
   const handleDifficultyChange = async (difficulty: 'beginner' | 'intermediate' | 'advanced') => {
     const newSettings = { ...settings, difficultyLevel: difficulty };
     await saveSettings(newSettings);
@@ -102,373 +100,275 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   };
 
   const testSpeech = async () => {
-    await ttsService.speak('This is how the voice sounds at this speed.');
+    await ttsService.speak("This is a speech test with your current settings.");
   };
 
+  const renderSectionHeader = (title: string) => (
+    <Text style={styles.sectionTitle}>{title}</Text>
+  );
+
   return (
-    <ImageBackground source={BACKGROUND_IMAGE} style={styles.bg} resizeMode="cover">
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        {/* Header */}
+    <SafeAreaView style={styles.container}>
+      <EmotionTracker moduleName="Settings" isActive={!tourVisible} />
+      <StatusBar barStyle="dark-content" backgroundColor={DT.bg.sage} />
+      <BackButton color={DT.accent.navy} />
+      <InfoButton onPress={() => setTourVisible(true)} color={DT.accent.navy} />
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonContainer}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-          <View style={styles.titleContainer}>
-              <Text style={styles.headerTitle}>Settings ⚙️</Text>
-          </View>
-          <View style={{ width: 60 }} />
+            <Text style={styles.headerTitle}>Settings ⚙️</Text>
+            <Text style={styles.headerSubtitle}>Customize your experience</Text>
         </View>
 
-        {/* Voice Speed */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Voice Speed 🔊</Text>
-          
-          <View style={styles.settingCard}>
-            <Text style={styles.settingLabel}>
-              Speech Rate: {settings.ttsConfig.rate.toFixed(1)}x
-            </Text>
-            
-            <View style={styles.speedButtons}>
-              {[0.3, 0.5, 0.7, 1.0].map((rate) => (
+        {/* VOICE SETTINGS */}
+        {renderSectionHeader("Voice & Speech 🗣️")}
+        <View style={styles.card}>
+          <Text style={styles.label}>Speech Speed</Text>
+          <View style={styles.optionRow}>
+            {(['slow', 'medium', 'fast'] as const).map((speed) => {
+              const rate = speed === 'slow' ? 0.3 : speed === 'medium' ? 0.5 : 0.7;
+              const isActive = settings.ttsConfig.rate === rate;
+              return (
                 <TouchableOpacity
-                  key={rate}
-                  style={[
-                    styles.speedButton,
-                    settings.ttsConfig.rate === rate && styles.speedButtonActive,
-                  ]}
+                  key={speed}
+                  style={[styles.optionButton, isActive && styles.optionButtonActive]}
                   onPress={() => handleSpeechRateChange(rate)}
                 >
-                  <Text
-                    style={[
-                      styles.speedButtonText,
-                      settings.ttsConfig.rate === rate && styles.speedButtonTextActive,
-                    ]}
-                  >
-                    {rate}x
+                  <Text style={[styles.optionButtonText, isActive && styles.optionButtonTextActive]}>
+                    {speed.charAt(0).toUpperCase() + speed.slice(1)}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity style={styles.testButton} onPress={testSpeech}>
-              <Text style={styles.testButtonText}>Test Voice</Text>
-            </TouchableOpacity>
+              );
+            })}
           </View>
+          <TouchableOpacity style={styles.testButton} onPress={testSpeech}>
+            <Text style={styles.testButtonText}>Test Speech</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Font Size */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Text Size 📝</Text>
-          
-          <View style={styles.settingCard}>
-            <View style={styles.optionButtons}>
-              {(['small', 'medium', 'large'] as const).map((size) => (
+        {/* ACCESSIBILITY & DYSLEXIA */}
+        {renderSectionHeader("Accessibility & Reading 📖")}
+        <View style={styles.card}>
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.switchLabel}>Dyslexia Support Mode</Text>
+              <Text style={styles.switchSubtext}>Applies 35% letter spacing and 1.5x leading for deeper legibility.</Text>
+            </View>
+            <Switch
+              value={globalSettings.dyslexiaFormattingEnabled}
+              onValueChange={(val) => updateGlobalSettings({ dyslexiaFormattingEnabled: val })}
+              trackColor={{ false: DT.bg.stone, true: DT.accent.navy }}
+              thumbColor={globalSettings.dyslexiaFormattingEnabled ? DT.bg.cream : '#f4f3f4'}
+            />
+          </View>
+
+          <View style={[styles.switchRow, { marginTop: 24 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.switchLabel}>Safe Contrast Mode</Text>
+              <Text style={styles.switchSubtext}>Swaps intense backgrounds for muted deep palettes without pure black text.</Text>
+            </View>
+            <Switch
+              value={globalSettings.themeMode === 'dyslexicDark'}
+              onValueChange={(val) => updateGlobalSettings({ themeMode: val ? 'dyslexicDark' : 'light' })}
+              trackColor={{ false: DT.bg.stone, true: DT.accent.navy }}
+              thumbColor={globalSettings.themeMode === 'dyslexicDark' ? DT.bg.cream : '#f4f3f4'}
+            />
+          </View>
+
+          <View style={[styles.switchRow, { marginTop: 24 }]}>
+            <View>
+              <Text style={styles.switchLabel}>Reading Typeface</Text>
+              <Text style={styles.switchSubtext}>Current: {globalSettings.fontFamily}</Text>
+            </View>
+          </View>
+          <View style={[styles.optionRow, { marginTop: 12, flexWrap: 'wrap', gap: 8 }]}>
+            {(['System', 'Lexend', 'Roboto', 'OpenSans', 'AtkinsonHyperlegible'] as const).map((font) => {
+              const isActive = globalSettings.fontFamily === font;
+              return (
                 <TouchableOpacity
-                  key={size}
-                  style={[
-                    styles.optionButton,
-                    settings.fontSize === size && styles.optionButtonActive,
-                  ]}
-                  onPress={() => handleFontSizeChange(size)}
+                  key={font}
+                  style={[styles.smallOptionButton, isActive && styles.optionButtonActive, { marginBottom: 8 }]}
+                  onPress={() => updateGlobalSettings({ fontFamily: font })}
                 >
-                  <Text
-                    style={[
-                      styles.optionButtonText,
-                      settings.fontSize === size && styles.optionButtonTextActive,
-                    ]}
-                  >
-                    {size.charAt(0).toUpperCase() + size.slice(1)}
+                  <Text style={[styles.smallOptionText, isActive && styles.optionButtonTextActive]}>
+                    {font === 'AtkinsonHyperlegible' ? 'Atkinson' : font}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+              );
+            })}
           </View>
         </View>
 
-        {/* Default Difficulty */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Default Difficulty 🎯</Text>
-          
-          <View style={styles.settingCard}>
-            <View style={styles.optionButtons}>
-              {(['beginner', 'intermediate', 'advanced'] as const).map((level) => (
+        {/* APP PREFERENCES */}
+        {renderSectionHeader("Preferences ✨")}
+        <View style={styles.card}>
+          <View style={styles.switchRow}>
+            <View>
+              <Text style={styles.switchLabel}>Haptic Feedback</Text>
+              <Text style={styles.switchSubtext}>Feel vibrations when you interact</Text>
+            </View>
+            <Switch
+              value={settings.hapticEnabled}
+              onValueChange={handleHapticToggle}
+              trackColor={{ false: DT.bg.stone, true: DT.accent.navy }}
+              thumbColor={settings.hapticEnabled ? DT.bg.cream : '#f4f3f4'}
+            />
+          </View>
+
+          <View style={[styles.switchRow, { marginTop: 24 }]}>
+            <View>
+              <Text style={styles.switchLabel}>Difficulty Level</Text>
+              <Text style={styles.switchSubtext}>Current: {settings.difficultyLevel}</Text>
+            </View>
+          </View>
+          <View style={[styles.optionRow, { marginTop: 12 }]}>
+            {(['beginner', 'intermediate', 'advanced'] as const).map((level) => {
+              const isActive = settings.difficultyLevel === level;
+              return (
                 <TouchableOpacity
                   key={level}
-                  style={[
-                    styles.optionButton,
-                    settings.difficultyLevel === level && styles.optionButtonActive,
-                  ]}
+                  style={[styles.smallOptionButton, isActive && styles.optionButtonActive]}
                   onPress={() => handleDifficultyChange(level)}
                 >
-                  <Text
-                    style={[
-                      styles.optionButtonText,
-                      settings.difficultyLevel === level && styles.optionButtonTextActive,
-                    ]}
-                  >
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
+                  <Text style={[styles.smallOptionText, isActive && styles.optionButtonTextActive]}>
+                    {level.charAt(0).toUpperCase()}
                   </Text>
                 </TouchableOpacity>
-              ))}
+              );
+            })}
+          </View>
+        </View>
+
+        {/* PARENTAL AREA */}
+        {renderSectionHeader("Safe Zone 🛡️")}
+        <View style={styles.card}>
+          <TouchableOpacity 
+            style={styles.parentalButton}
+            onPress={() => setShowParentalGate(true)}
+          >
+            <View>
+              <Text style={styles.parentalButtonText}>Parental Controls</Text>
+              <Text style={styles.parentalButtonSub}>Reports, Data & Account Management</Text>
             </View>
-          </View>
+            <Text style={styles.navIcon}>▶</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Accessibility */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Accessibility ♿</Text>
-          
-          <View style={styles.settingCard}>
-            <View style={[styles.switchRow, { marginBottom: 20 }]}>
-              <View>
-                <Text style={styles.switchLabel}>Dyslexic Font</Text>
-                <Text style={styles.switchSubtext}>
-                  Use OpenDyslexic style font
-                </Text>
-              </View>
-              <Switch
-                value={settings.dyslexicMode}
-                onValueChange={async (val) => {
-                   const newSettings = { ...settings, dyslexicMode: val };
-                   await saveSettings(newSettings);
-                }}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.cardBackground}
-              />
-            </View>
-
-            <View style={styles.switchRow}>
-              <View>
-                <Text style={styles.switchLabel}>High Contrast</Text>
-                <Text style={styles.switchSubtext}>
-                  Enhance visibility and text contrast
-                </Text>
-              </View>
-              <Switch
-                value={settings.highContrast}
-                onValueChange={async (val) => {
-                   const newSettings = { ...settings, highContrast: val };
-                   await saveSettings(newSettings);
-                }}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.cardBackground}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Haptic Feedback */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences ⚙️</Text>
-          
-          <View style={styles.settingCard}>
-            <View style={styles.switchRow}>
-              <View>
-                <Text style={styles.switchLabel}>Vibration Feedback</Text>
-                <Text style={styles.switchSubtext}>
-                  Feel vibrations when recording
-                </Text>
-              </View>
-              <Switch
-                value={settings.hapticEnabled}
-                onValueChange={handleHapticToggle}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.cardBackground}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Parental Controls Gate (Replaces Clear Data & Clinical Report) */}
-        <View style={[styles.section, { marginTop: 32 }]}>
-          <View style={styles.settingCard}>
-            <TouchableOpacity 
-              style={styles.parentalButton} 
-              onPress={() => setShowParentalGate(true)}
-            >
-              <Text style={{ fontSize: 24, marginRight: 12 }}>🛡️</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.parentalButtonText}>Parental Controls</Text>
-                <Text style={styles.parentalButtonSub}>Manage screen time, limits & data</Text>
-              </View>
-              <Text style={{ fontSize: 20, color: '#3B82F6' }}>›</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* App Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About 📱</Text>
-          
-          <View style={styles.settingCard}>
-            <Text style={styles.infoText}>Unified Learning App v1.0.0</Text>
-            <Text style={styles.infoSubtext}>
-              Inclusive learning ecosystem for dyslexic learners
-            </Text>
-            <Text style={styles.infoSubtext}>
-              Built with ❤️
-            </Text>
-          </View>
-        </View>
-
+        <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Parental PIN Modal */}
-      <ParentalGateModal 
+      <ParentalGateModal
         visible={showParentalGate}
-        onClose={() => setShowParentalGate(false)}
         onSuccess={() => {
           setShowParentalGate(false);
-          // Small delay ensures Modal unmounts completely on Android before navigating,
-          // preventing "invisible overlays" from blocking the next screen.
-          setTimeout(() => {
-            if (navigationRef.isReady()) {
-              navigationRef.navigate('ParentalDashboard');
-            }
-          }, 100);
+          navigation.navigate('ParentalDashboard');
         }}
+        onCancel={() => setShowParentalGate(false)}
       />
     </SafeAreaView>
-    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  bg: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: DT.bg.sage,
   },
-  contentContainer: {
-    paddingBottom: 40,
+  scrollContent: {
+    padding: 24,
+    paddingTop: 60,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginTop: 30,
-  },
-  backButtonContainer: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  backButton: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primaryBold,
-    color: colors.primary,
-  },
-  titleContainer: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
+    marginBottom: 32,
   },
   headerTitle: {
-    fontSize: fonts.sizes.large,
-    fontFamily: fonts.primaryBold,
-    color: colors.text,
+    fontSize: 34,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'sans-serif-rounded',
   },
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 16,
+  headerSubtitle: {
+    fontSize: 16,
+    color: DT.text.secondary,
+    fontWeight: DT.typography.weightMedium,
+    marginTop: 4,
   },
   sectionTitle: {
-    fontSize: fonts.sizes.large,
-    fontFamily: fonts.primaryBold,
-    color: colors.text,
+    fontSize: 18,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.muted,
+    marginBottom: 12,
+    marginTop: 8,
+    textTransform: 'uppercase',
+    letterSpacing: DT.typography.letterSpacingUI,
+  },
+  card: {
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.xl,
+    padding: 24,
+    marginBottom: 24,
+    ...DT.shadow.soft,
+    borderWidth: 1,
+    borderColor: DT.surface.cardBorder,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: DT.typography.weightBold,
+    color: DT.text.primary,
     marginBottom: 12,
   },
-  settingCard: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  settingLabel: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primary,
-    color: colors.text,
-    marginBottom: 16,
-  },
-  speedButtons: {
+  optionRow: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 16,
-  },
-  speedButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  speedButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  speedButtonText: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primary,
-    color: colors.text,
-  },
-  speedButtonTextActive: {
-    color: colors.cardBackground,
-    fontFamily: fonts.primaryBold,
-  },
-  testButton: {
-    backgroundColor: colors.secondary,
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-  },
-  testButtonText: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primaryBold,
-    color: colors.cardBackground,
-  },
-  optionButtons: {
-    flexDirection: 'row',
-    gap: 12,
   },
   optionButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
+    paddingVertical: 14,
+    borderRadius: DT.radius.md,
+    backgroundColor: DT.bg.stone,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: 'transparent',
   },
   optionButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: DT.accent.navy,
+    borderColor: DT.accent.navy,
   },
   optionButtonText: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primary,
-    color: colors.text,
+    fontSize: 15,
+    fontWeight: DT.typography.weightMedium,
+    color: DT.text.primary,
   },
   optionButtonTextActive: {
-    color: colors.cardBackground,
-    fontFamily: fonts.primaryBold,
+    color: DT.text.onDark,
+    fontWeight: DT.typography.weightBold,
+  },
+  smallOptionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: DT.radius.md,
+    backgroundColor: DT.bg.stone,
+    alignItems: 'center',
+  },
+  smallOptionText: {
+    fontSize: 14,
+    fontWeight: DT.typography.weightBold,
+    color: DT.text.primary,
+  },
+  testButton: {
+    backgroundColor: DT.accent.teal,
+    borderRadius: DT.radius.md,
+    padding: 16,
+    alignItems: 'center',
+    ...DT.shadow.soft,
+  },
+  testButtonText: {
+    fontSize: 16,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.onDark,
+    letterSpacing: DT.typography.letterSpacingUI,
   },
   switchRow: {
     flexDirection: 'row',
@@ -476,42 +376,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   switchLabel: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primary,
-    color: colors.text,
+    fontSize: 17,
+    fontWeight: DT.typography.weightBold,
+    color: DT.text.primary,
     marginBottom: 4,
   },
   switchSubtext: {
-    fontSize: fonts.sizes.small,
-    fontFamily: fonts.primary,
-    color: colors.textSecondary,
-  },
-  infoText: {
-    fontSize: fonts.sizes.large,
-    fontFamily: fonts.primaryBold,
-    color: colors.text,
-    marginBottom: 8,
-  },
-  infoSubtext: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primary,
-    color: colors.textSecondary,
-    marginBottom: 4,
+    fontSize: 14,
+    color: DT.text.secondary,
+    fontWeight: DT.typography.weightMedium,
   },
   parentalButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   parentalButtonText: {
-    fontSize: 18,
-    fontFamily: fonts.primaryBold,
-    color: '#1E293B',
+    fontSize: 19,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
   },
   parentalButtonSub: {
-    fontSize: 13,
-    color: '#64748B',
+    fontSize: 14,
+    color: DT.text.secondary,
     marginTop: 2,
-  }
+  },
+  navIcon: {
+    fontSize: 20,
+    color: DT.accent.navy,
+    opacity: 0.5,
+  },
 });
 
 export default SettingsScreen;

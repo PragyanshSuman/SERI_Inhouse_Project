@@ -37,7 +37,7 @@ const overlayColors = [
 export default function SidebarContent(props: DrawerContentComponentProps) {
   const { settings, updateSettings } = useSettings();
   const { language, overlayColor, isRulerEnabled, enableAnimations, enableSound } = settings;
-  const { logout } = useAuth();
+  const { logout, username } = useAuth();
 
   const handleLanguageSelect = (lang: Language) => {
     updateSettings({ language: lang });
@@ -48,10 +48,12 @@ export default function SidebarContent(props: DrawerContentComponentProps) {
       <LinearGradient colors={['#4F46E5', '#3730A3']} style={styles.header}>
         <View style={styles.profileContainer}>
           <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>L</Text>
+            <Text style={styles.avatarText}>
+              {username ? username.charAt(0).toUpperCase() : 'L'}
+            </Text>
           </View>
           <View>
-            <Text style={styles.userName}>Learner</Text>
+            <Text style={styles.userName}>{username || 'Learner'}</Text>
             <Text style={styles.userRole}>Super Student</Text>
           </View>
         </View>

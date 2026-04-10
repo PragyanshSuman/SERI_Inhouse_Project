@@ -16,6 +16,11 @@ export interface AppSettings {
     enableAnimations: boolean; // Fun Mode
     enableSound: boolean;
 
+    // --- Dyslexia Accessibility ---
+    dyslexiaFormattingEnabled: boolean; // Controls +35% spacing & 1.5x lineHeight
+    themeMode: 'light' | 'dyslexicDark'; // 'dyslexicDark' avoids pure black (#0)
+    fontFamily: 'System' | 'Lexend' | 'Roboto' | 'OpenSans' | 'AtkinsonHyperlegible';
+
     // --- Parental Controls ---
     parentalPIN: string;
     maxScreenTimeMins: number; // Healthy limit: clamped between 15 and 120
@@ -42,6 +47,11 @@ const defaultSettings: AppSettings = {
     maxScreenTimeMins: 60, // 1 hour default
     frustrationSensitivity: 'medium',
     maxDifficulty: 'advanced', // No ceiling by default
+    
+    // Accessibility Defaults
+    dyslexiaFormattingEnabled: false,
+    themeMode: 'light',
+    fontFamily: 'System',
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -77,6 +87,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             console.error('Failed to save settings', e);
         }
     };
+
 
     // Compatibility for legacy useLanguage hook consumers
     // We can expose a helper if needed, but better to refactor them.

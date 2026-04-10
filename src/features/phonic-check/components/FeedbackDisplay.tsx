@@ -3,10 +3,10 @@
 import React, { useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Animated,
 } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { colors, fonts } from '../theme';
 import { PronunciationResult } from '../types';
 

@@ -1,17 +1,40 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { useNavigation } from '@react-navigation/native';
 import { SIGHT_WORDS_DATA } from '../../../data/sightWords';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import EmotionTracker from '../../../components/EmotionTracker';
+import { DT } from '../../../utils/DyslexiaTheme';
 
-const BG_IMAGE = require('../../../assets/images/dashboard_bg.png'); // Reuse existing bg
+
 
 const SightWordsDashboard = () => {
     const navigation = useNavigation<any>();
     const { settings } = useSettings();
+    const [tourVisible, setTourVisible] = useState(false);
+
+    const tourSteps: TourStep[] = [
+        {
+            title: getTranslation(settings.language, 'dashboard_ninja_title'),
+            description: getTranslation(settings.language, 'tour_ninja_welcome_desc'),
+            position: 'top',
+            style: { top: 120, alignSelf: 'center' },
+            arrowPosition: 'bottom',
+        },
+        {
+            title: getTranslation(settings.language, 'dashboard_ninja_subtitle'),
+            description: "Choose a Rank from the list below: Pre-K, Kindergarten, 1st Grade, or 2nd Grade. Each level has different sight words to master!",
+            position: 'center',
+            style: { top: '50%', alignSelf: 'center' },
+            arrowPosition: 'bottom',
+        }
+    ];
 
     const getLevelLabel = (id: string, defaultLabel: string) => {
         switch(id) {
@@ -24,13 +47,13 @@ const SightWordsDashboard = () => {
     };
 
     return (
-        <ImageBackground source={BG_IMAGE} style={styles.container}>
-            <EmotionTracker moduleName="Sight Words Dashboard" isActive={true} />
-            <LinearGradient colors={['rgba(30,41,59,0.9)', 'rgba(30,41,59,0.4)']} style={styles.overlay}>
+        <View style={styles.container}>
+            <EmotionTracker moduleName="Sight Words Dashboard" isActive={!tourVisible} />
+            <BackButton color={DT.text.primary} />
+            <InfoButton onPress={() => setTourVisible(true)} color={DT.text.primary} />
+            <LinearGradient colors={DT.gradient.cream} style={StyleSheet.absoluteFillObject} />
+            <View style={styles.overlay}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <Text style={styles.backText}>←</Text>
-                    </TouchableOpacity>
                     <Text style={styles.title}>{getTranslation(settings.language, 'dashboard_ninja_title')}</Text>
                 </View>
 
@@ -40,12 +63,12 @@ const SightWordsDashboard = () => {
                     {SIGHT_WORDS_DATA.map((level) => (
                         <TouchableOpacity
                             key={level.id}
-                            style={[styles.card, { borderColor: level.color }]}
+                            style={[styles.card]}
                             onPress={() => navigation.navigate('WordNinjaGame', { levelId: level.id })}
                             activeOpacity={0.8}
                         >
                             <LinearGradient
-                                colors={[level.color, '#1E293B']}
+                                colors={DT.gradient.warmCard}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
                                 style={styles.cardGradient}
@@ -61,48 +84,42 @@ const SightWordsDashboard = () => {
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
-            </LinearGradient>
-        </ImageBackground>
+            </View>
+            <FeatureTour 
+                visible={tourVisible}
+                steps={tourSteps}
+                onComplete={() => setTourVisible(false)}
+                onSkip={() => setTourVisible(false)}
+            />
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: DT.bg.cream,
     },
     overlay: {
         flex: 1,
-        paddingTop: 60,
+        paddingTop: 70,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        marginBottom: 30,
-    },
-    backBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 15,
-    },
-    backText: {
-        color: '#FFF',
-        fontSize: 24,
-        fontWeight: 'bold',
+        marginBottom: 8,
     },
     title: {
-        fontSize: 32,
-        color: '#FFF',
-        fontWeight: 'bold',
+        fontSize: 30,
+        color: DT.text.primary,
+        fontWeight: DT.typography.weightHeavy,
         fontFamily: 'OpenDyslexic-Regular',
+        letterSpacing: DT.typography.letterSpacingUI,
     },
     subtitle: {
-        fontSize: 18,
-        color: '#CBD5E1',
+        fontSize: 14,
+        color: DT.text.muted,
         marginBottom: 20,
         textAlign: 'center',
         textTransform: 'uppercase',
@@ -114,15 +131,12 @@ const styles = StyleSheet.create({
     },
     card: {
         height: 100,
-        marginBottom: 16,
-        borderRadius: 20,
-        borderWidth: 2,
+        marginBottom: 14,
+        borderRadius: DT.radius.xl,
+        borderWidth: 1,
+        borderColor: DT.surface.cardBorder,
         overflow: 'hidden',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
+        ...DT.shadow.soft,
     },
     cardGradient: {
         flex: 1,
@@ -135,19 +149,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cardTitle: {
-        fontSize: 22,
-        color: '#FFF',
-        fontWeight: 'bold',
+        fontSize: 20,
+        color: DT.text.primary,
+        fontWeight: DT.typography.weightBold,
         fontFamily: 'OpenDyslexic-Regular',
+        letterSpacing: DT.typography.letterSpacingBody,
     },
     cardSub: {
-        fontSize: 14,
-        color: 'rgba(255,255,255,0.7)',
+        fontSize: 13,
+        color: DT.text.secondary,
         marginTop: 4,
+        lineHeight: 20,
     },
     playIcon: {
-        fontSize: 28,
-        color: '#FFF',
+        fontSize: 24,
+        color: DT.accent.indigo,
     }
 });
 

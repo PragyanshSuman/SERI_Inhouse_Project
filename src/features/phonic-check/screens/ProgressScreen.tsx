@@ -1,4 +1,4 @@
-// src/screens/ProgressScreen.tsx - User progress and history screen
+// src/features/phonic-check/screens/ProgressScreen.tsx
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -7,21 +7,18 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
-  TouchableOpacity,
-  Dimensions,
-  ImageBackground,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors, fonts, globalStyles } from '../theme';
+import type { RootStackParamList } from '../../../navigation/RootNavigator';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
+import EmotionTracker from '../../../components/EmotionTracker';
 import { StorageService } from '../services/storageService';
-
 import { useAuth } from '../../../context/AuthContext';
 import { PracticeSession } from '../types';
-
-type RootStackParamList = {
-  Home: undefined;
-  Progress: undefined;
-};
+import { DT } from '../../../utils/DyslexiaTheme';
 
 type ProgressScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Progress'>;
 
@@ -37,19 +34,17 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ navigation }) => {
     recentImprovement: 0,
   });
   const [recentSessions, setRecentSessions] = useState<PracticeSession[]>([]);
+  const [tourVisible, setTourVisible] = useState(false);
+  
   const auth = useAuth() as any;
   const currentUserId = auth?.userId || null;
   const storageService = new StorageService(currentUserId);
   
-  // Shared background
-  const BACKGROUND_IMAGE = require('../../letter-tracing/assets/images/background_for_initial_home_screen.png');
-
   useEffect(() => {
     loadProgress();
   }, []);
 
   const loadProgress = async () => {
-    // ... existing ... 
     const stats = await storageService.getStatistics();
     setStatistics(stats);
 
@@ -58,14 +53,13 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ navigation }) => {
   };
 
   const getScoreColor = (score: number): string => {
-    if (score >= 85) return colors.scoreExcellent;
-    if (score >= 70) return colors.scoreGood;
-    if (score >= 50) return colors.scoreFair;
-    return colors.scoreNeedsPractice;
+    if (score >= 85) return DT.text.success;
+    if (score >= 70) return DT.accent.sky;
+    if (score >= 50) return DT.accent.amber;
+    return DT.text.error;
   };
 
   const formatDate = (timestamp: number): string => {
-      // ... existing ... 
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -80,22 +74,21 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <ImageBackground source={BACKGROUND_IMAGE} style={styles.bg} resizeMode="cover">
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <SafeAreaView style={styles.container}>
+      <EmotionTracker moduleName="Phonic Progress" isActive={!tourVisible} />
+      <StatusBar barStyle="dark-content" backgroundColor={DT.bg.sage} />
+      <BackButton color={DT.accent.navy} />
+      <InfoButton onPress={() => setTourVisible(true)} color={DT.accent.navy} />
+      
+      <ScrollView contentContainerStyle={styles.contentContainer}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonContainer}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-          <View style={styles.titleContainer}>
-            <Text style={styles.headerTitle}>Your Progress 📈</Text>
-          </View>
-          <View style={{ width: 60 }} />
+            <Text style={styles.headerTitle}>Progress 📈</Text>
+            <Text style={styles.headerSubtitle}>Track your learning journey</Text>
         </View>
 
         {/* Statistics Cards */}
-        <View style={styles.statsContainer}>
+        <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Text style={styles.statIcon}>📚</Text>
             <Text style={styles.statValue}>{statistics.totalWords}</Text>
@@ -104,288 +97,191 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ navigation }) => {
 
           <View style={styles.statCard}>
             <Text style={styles.statIcon}>⭐</Text>
-            <Text style={styles.statValue}>{Math.round(statistics.averageScore)}</Text>
-            <Text style={styles.statLabel}>Average Score</Text>
+            <Text style={styles.statValue}>{Math.round(statistics.averageScore)}%</Text>
+            <Text style={styles.statLabel}>Avg. Score</Text>
           </View>
-
+          
           <View style={styles.statCard}>
             <Text style={styles.statIcon}>🏆</Text>
-            <Text style={styles.statValue}>{statistics.bestScore}</Text>
+            <Text style={styles.statValue}>{Math.round(statistics.bestScore)}%</Text>
             <Text style={styles.statLabel}>Best Score</Text>
           </View>
 
-          <View style={[styles.statCard, styles.statCardWide]}>
-            <Text style={styles.statIcon}>
-              {statistics.recentImprovement > 0 ? '📈' : statistics.recentImprovement < 0 ? '📉' : '➡️'}
-            </Text>
-            <Text style={styles.statValue}>
-              {statistics.recentImprovement > 0 ? '+' : ''}
-              {statistics.recentImprovement.toFixed(1)}
-            </Text>
-            <Text style={styles.statLabel}>Recent Improvement</Text>
+          <View style={styles.statCard}>
+            <Text style={styles.statIcon}>🚀</Text>
+            <Text style={styles.statValue}>+{statistics.recentImprovement}%</Text>
+            <Text style={styles.statLabel}>Improvement</Text>
           </View>
         </View>
 
-        {/* Recent Practice Sessions */}
-        <View style={styles.sessionsContainer}>
-          <Text style={styles.sectionTitle}>Recent Practice 📝</Text>
-
+        {/* Recent History */}
+        <Text style={styles.sectionTitle}>Recent Sessions</Text>
+        <View style={styles.historyContainer}>
           {recentSessions.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>🎯</Text>
-              <Text style={styles.emptyText}>No practice sessions yet</Text>
-              <Text style={styles.emptySubtext}>Start practicing to see your progress!</Text>
+              <Text style={styles.emptyText}>No sessions yet. Start practicing!</Text>
             </View>
           ) : (
             recentSessions.map((session, index) => (
-              <View key={index} style={styles.sessionCard}>
+              <View key={index} style={styles.sessionItem}>
                 <View style={styles.sessionHeader}>
                   <Text style={styles.sessionWord}>{session.word}</Text>
-                  <View
-                    style={[
-                      styles.sessionScoreBadge,
-                      { backgroundColor: getScoreColor(session.score) },
-                    ]}
-                  >
-                    <Text style={styles.sessionScoreText}>{session.score}</Text>
+                  <Text style={styles.sessionDate}>{formatDate(session.timestamp)}</Text>
+                </View>
+                <View style={styles.scoreRow}>
+                  <View style={styles.progressBarBg}>
+                    <View 
+                      style={[
+                        styles.progressBarFill, 
+                        { 
+                          width: `${session.score}%`,
+                          backgroundColor: getScoreColor(session.score)
+                        }
+                      ]} 
+                    />
                   </View>
+                  <Text style={[styles.sessionScore, { color: getScoreColor(session.score) }]}>
+                    {Math.round(session.score)}%
+                  </Text>
                 </View>
-
-                {/* Syllable Scores */}
-                <View style={styles.syllableScoresContainer}>
-                  {session.syllableScores.map((syllable, idx) => (
-                    <View key={idx} style={styles.syllableScoreItem}>
-                      <Text style={styles.syllableText}>{syllable.syllable}</Text>
-                      <View
-                        style={[
-                          styles.syllableScoreBar,
-                          { width: `${syllable.score}%`, backgroundColor: getScoreColor(syllable.score) },
-                        ]}
-                      />
-                    </View>
-                  ))}
-                </View>
-
-                <Text style={styles.sessionTime}>{formatDate(session.timestamp)}</Text>
               </View>
             ))
           )}
         </View>
-
-        {/* Motivational Message */}
-        <View style={styles.motivationCard}>
-          <Text style={styles.motivationIcon}>🌟</Text>
-          <Text style={styles.motivationText}>
-            {statistics.totalWords === 0
-              ? "Start your journey to better pronunciation!"
-              : statistics.averageScore >= 85
-              ? "You're doing amazing! Keep up the excellent work!"
-              : statistics.averageScore >= 70
-              ? "Great progress! You're improving every day!"
-              : "Keep practicing! Every attempt makes you better!"}
-          </Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
-    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  bg: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: DT.bg.sage,
   },
   contentContainer: {
-    paddingBottom: 24,
+    padding: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginTop: 30, // Status bar adjustment
-  },
-  backButtonContainer: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  backButton: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primaryBold,
-    color: colors.primary,
-  },
-  titleContainer: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
+    marginBottom: 32,
   },
   headerTitle: {
-    fontSize: fonts.sizes.large,
-    fontFamily: fonts.primaryBold,
-    color: colors.text,
+    fontSize: 34,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'sans-serif-rounded',
+    letterSpacing: DT.typography.letterSpacingUI,
   },
-  statsContainer: {
+  headerSubtitle: {
+    fontSize: 16,
+    color: DT.text.secondary,
+    fontWeight: DT.typography.weightMedium,
+    marginTop: 4,
+  },
+  statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    paddingHorizontal: 16,
-    marginTop: 8,
+    justifyContent: 'space-between',
+    gap: 16,
+    marginBottom: 32,
   },
   statCard: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 16,
+    width: '47%',
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.lg,
     padding: 20,
-    flex: 1,
-    minWidth: '47%',
     alignItems: 'center',
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statCardWide: {
-    width: '100%',
+    ...DT.shadow.soft,
+    borderWidth: 1,
+    borderColor: DT.surface.cardBorder,
   },
   statIcon: {
-    fontSize: 40,
+    fontSize: 28,
     marginBottom: 8,
   },
   statValue: {
-    fontSize: fonts.sizes.xlarge,
-    fontFamily: fonts.primaryBold,
-    color: colors.text,
-    marginBottom: 4,
+    fontSize: 24,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
   },
   statLabel: {
-    fontSize: fonts.sizes.small,
-    fontFamily: fonts.primary,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: DT.text.muted,
+    fontWeight: DT.typography.weightBold,
+    textTransform: 'uppercase',
+    marginTop: 2,
     textAlign: 'center',
   },
-  sessionsContainer: {
-    paddingHorizontal: 16,
-    marginTop: 24,
-  },
   sectionTitle: {
-    fontSize: fonts.sizes.large,
-    fontFamily: fonts.primaryBold,
-    color: colors.text,
+    fontSize: 20,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
     marginBottom: 16,
+    letterSpacing: DT.typography.letterSpacingUI,
   },
-  sessionCard: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 16,
+  historyContainer: {
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.xl,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...DT.shadow.soft,
+    borderWidth: 1,
+    borderColor: DT.surface.cardBorder,
+  },
+  sessionItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: DT.surface.divider,
   },
   sessionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  sessionWord: {
-    fontSize: fonts.sizes.large,
-    fontFamily: fonts.primaryBold,
-    color: colors.text,
-  },
-  sessionScoreBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  sessionScoreText: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primaryBold,
-    color: colors.text,
-  },
-  syllableScoresContainer: {
-    gap: 8,
-    marginBottom: 12,
-  },
-  syllableScoreItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  syllableText: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primary,
-    color: colors.text,
-    width: 60,
-  },
-  syllableScoreBar: {
-    height: 8,
-    borderRadius: 4,
-    minWidth: 20,
-  },
-  sessionTime: {
-    fontSize: fonts.sizes.small,
-    fontFamily: fonts.primary,
-    color: colors.textSecondary,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: fonts.sizes.large,
-    fontFamily: fonts.primaryBold,
-    color: colors.text,
     marginBottom: 8,
   },
-  emptySubtext: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primary,
-    color: colors.textSecondary,
-    textAlign: 'center',
+  sessionWord: {
+    fontSize: 18,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    textTransform: 'capitalize',
   },
-  motivationCard: {
-    backgroundColor: colors.encouragement,
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginTop: 24,
+  sessionDate: {
+    fontSize: 13,
+    color: DT.text.muted,
+    fontWeight: DT.typography.weightMedium,
+  },
+  scoreRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    gap: 12,
   },
-  motivationIcon: {
-    fontSize: 48,
-    marginBottom: 12,
+  progressBarBg: {
+    flex: 1,
+    height: 10,
+    backgroundColor: DT.bg.stone,
+    borderRadius: 5,
+    overflow: 'hidden',
   },
-  motivationText: {
-    fontSize: fonts.sizes.medium,
-    fontFamily: fonts.primary,
-    color: colors.text,
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  sessionScore: {
+    fontSize: 15,
+    fontWeight: DT.typography.weightHeavy,
+    width: 45,
+    textAlign: 'right',
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: DT.text.muted,
+    fontStyle: 'italic',
     textAlign: 'center',
-    lineHeight: 24,
   },
 });
 

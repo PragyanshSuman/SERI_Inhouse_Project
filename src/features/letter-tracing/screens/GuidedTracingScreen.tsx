@@ -1,4 +1,4 @@
-// src/screens/GuidedTracingScreen.tsx
+// src/features/letter-tracing/screens/GuidedTracingScreen.tsx
 
 import React from 'react';
 import {
@@ -9,14 +9,19 @@ import {
   SafeAreaView,
   Dimensions,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/RootNavigator';
 import FeatureTour from '../../../components/FeatureTour';
 import EmotionTracker from '../../../components/EmotionTracker';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
+import { useSettings } from '../../../context/SettingsContext';
+import { DT } from '../../../utils/DyslexiaTheme';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type GuidedTracingScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,45 +32,47 @@ export default function GuidedTracingScreen() {
   const navigation = useNavigation<GuidedTracingScreenNavigationProp>();
 
   const handleGuidedPractice = () => {
-    console.log('Guided Alphabet Practice clicked - Navigating to LetterMenu');
     // Navigate to LetterMenuScreen for guided practice
-    navigation.navigate('LetterGuidingMenu');
+    navigation.navigate('LetterMenu');
   };
 
   const handleUnguidedPractice = () => {
+    // Navigate to unguided practice if available
     console.log('Unguided Alphabet Practice clicked');
-    // Add your navigation logic here for unguided practice
-    // Example: navigation.navigate('UnguidedLetterMenu');
   };
+
   // Tour State
-  const [tourVisible, setTourVisible] = React.useState(true);
+  const { settings } = useSettings();
+  const [tourVisible, setTourVisible] = React.useState(false);
 
   const tourSteps = [
-      {
-          title: "Guided Practice 🎯",
-          description: "This mode helps you learn letter formation step-by-step.",
-          position: 'top' as const,
-      },
-      {
-          title: "Visual Guides 👁️",
-          description: "Follow the on-screen indicators and ghost hand.",
-          position: 'bottom' as const,
-      },
-      {
-          title: "Challenge Mode 💪",
-          description: "Try Unguided Practice later to test your memory!",
-          position: 'bottom' as const,
-      }
+    {
+      title: "Guided Practice 🎯",
+      description: "This mode helps you learn letter formation step-by-step.",
+      position: 'top' as const,
+    },
+    {
+      title: "Visual Guides 👁️",
+      description: "Follow the on-screen indicators and ghost hand.",
+      position: 'bottom' as const,
+    },
+    {
+      title: "Challenge Mode 💪",
+      description: "Try Unguided Practice later to test your memory!",
+      position: 'bottom' as const,
+    }
   ];
 
   const handleTourComplete = () => {
-      setTourVisible(false);
+    setTourVisible(false);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <EmotionTracker moduleName="Alphabet Playground" isActive={!tourVisible} />
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <StatusBar barStyle="dark-content" backgroundColor={DT.bg.cream} />
+      <BackButton color={DT.accent.indigo} />
+      <InfoButton onPress={() => setTourVisible(true)} color={DT.accent.indigo} />
       
       <View style={styles.content}>
         
@@ -129,30 +136,27 @@ export default function GuidedTracingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: DT.bg.cream,
   },
   content: {
     flex: 1,
+    padding: 24,
     justifyContent: 'center',
-    paddingHorizontal: 20,
     gap: 24,
   },
   button: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
-    borderWidth: 3,
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.xl,
+    padding: 24,
+    ...DT.shadow.soft,
+    borderWidth: 2,
+    borderColor: DT.surface.cardBorder,
   },
   guidedButton: {
-    borderColor: '#3B82F6',
+    borderColor: DT.accent.indigo,
   },
   unguidedButton: {
-    borderColor: '#8B5CF6',
+    borderColor: DT.accent.teal,
   },
   buttonContent: {
     alignItems: 'center',
@@ -166,42 +170,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   guidedIconBg: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: DT.bg.lavender,
   },
   unguidedIconBg: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: DT.bg.sage,
   },
   icon: {
     fontSize: 42,
   },
   buttonTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#1F2937',
+    fontSize: 24,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
     textAlign: 'center',
+    letterSpacing: DT.typography.letterSpacingUI,
+    fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'sans-serif-rounded',
   },
   buttonDescription: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: DT.typography.weightMedium,
+    color: DT.text.secondary,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: DT.typography.lineHeightBody,
   },
   badge: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 14,
+    borderRadius: DT.radius.pill,
     marginTop: 4,
   },
   guidedBadge: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: DT.bg.lavender,
   },
   unguidedBadge: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: DT.bg.sage,
   },
   badgeText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1F2937',
+    fontSize: 14,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
   },
 });

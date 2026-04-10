@@ -1,37 +1,59 @@
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import EmotionTracker from '../../../components/EmotionTracker';
+import { DT } from '../../../utils/DyslexiaTheme';
 
-// Placeholder Assets
-const BG_IMAGE = require('../../../assets/images/dashboard_bg.png'); 
 
 const RhymeDashboard = () => {
     const navigation = useNavigation<any>();
     const { settings } = useSettings();
+    const [tourVisible, setTourVisible] = useState(false);
+
+    const tourSteps: TourStep[] = [
+        {
+            title: getTranslation(settings.language, 'dashboard_rhyme_title'),
+            description: getTranslation(settings.language, 'tour_rhyme_welcome_desc'),
+            position: 'top',
+            style: { top: 120, alignSelf: 'center' },
+            arrowPosition: 'bottom',
+        },
+        {
+            title: getTranslation(settings.language, 'dashboard_rhyme_match_title'),
+            description: "Start your mission with 'Make a Match'! Other cool modes like Rhyme Train and Voice Vault are coming soon.",
+            position: 'center',
+            style: { top: '50%', alignSelf: 'center' },
+            arrowPosition: 'top',
+        }
+    ];
 
     return (
-        <ImageBackground source={BG_IMAGE} style={styles.container}>
-            <EmotionTracker moduleName="Rhyme Dashboard" isActive={true} />
-            <LinearGradient colors={['rgba(30,41,59,0.9)', 'rgba(79, 70, 229, 0.4)']} style={styles.overlay}>
+        <View style={styles.container}>
+            <EmotionTracker moduleName="Rhyme Dashboard" isActive={!tourVisible} />
+            <LinearGradient colors={DT.gradient.sage} style={StyleSheet.absoluteFillObject} />
+            <BackButton color={DT.text.primary} />
+            <InfoButton onPress={() => setTourVisible(true)} color={DT.text.primary} />
+            <View style={styles.overlay}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <Text style={styles.backText}>←</Text>
-                    </TouchableOpacity>
                     <Text style={styles.title}>{getTranslation(settings.language, 'dashboard_rhyme_title')}</Text>
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scroll}>
                     {/* Game Mode 1: Make a Match */}
                     <TouchableOpacity
-                        style={[styles.card, { borderColor: '#818CF8' }]}
+                        style={[styles.card]}
                         onPress={() => navigation.navigate('RhymingMatchGame')}
                         activeOpacity={0.9}
                     >
-                        <LinearGradient colors={['#FFF', '#E0E7FF']} style={styles.cardGradient}>
-                            <View style={styles.iconContainer}>
+                        <LinearGradient colors={DT.gradient.warmCard} style={styles.cardGradient}>
+                            <View style={[styles.iconContainer, { backgroundColor: DT.bg.lavender }]}>
                                 <Text style={styles.icon}>🐱</Text>
                             </View>
                             <View style={styles.cardContent}>
@@ -42,9 +64,9 @@ const RhymeDashboard = () => {
                     </TouchableOpacity>
 
                     {/* Game Mode 2: Rhyme Train (Coming Soon) */}
-                    <TouchableOpacity style={[styles.card, styles.locked, { borderColor: '#FCD34D' }]} activeOpacity={1}>
-                        <LinearGradient colors={['rgba(255,255,255,0.8)', 'rgba(255,255,255,0.5)']} style={styles.cardGradient}>
-                            <View style={[styles.iconContainer, { backgroundColor: '#FEF3C7' }]}>
+                    <TouchableOpacity style={[styles.card, styles.locked]} activeOpacity={1}>
+                        <LinearGradient colors={DT.gradient.cream} style={styles.cardGradient}>
+                            <View style={[styles.iconContainer, { backgroundColor: DT.bg.lemon }]}>
                                 <Text style={styles.icon}>🚂</Text>
                             </View>
                             <View style={styles.cardContent}>
@@ -55,9 +77,9 @@ const RhymeDashboard = () => {
                     </TouchableOpacity>
 
                     {/* Game Mode 3: Voice Vault (Coming Soon) */}
-                    <TouchableOpacity style={[styles.card, styles.locked, { borderColor: '#F87171' }]} activeOpacity={1}>
-                        <LinearGradient colors={['rgba(255,255,255,0.8)', 'rgba(255,255,255,0.5)']} style={styles.cardGradient}>
-                            <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2' }]}>
+                    <TouchableOpacity style={[styles.card, styles.locked]} activeOpacity={1}>
+                        <LinearGradient colors={DT.gradient.cream} style={styles.cardGradient}>
+                            <View style={[styles.iconContainer, { backgroundColor: DT.bg.blush }]}>
                                 <Text style={styles.icon}>🦜</Text>
                             </View>
                             <View style={styles.cardContent}>
@@ -67,32 +89,33 @@ const RhymeDashboard = () => {
                         </LinearGradient>
                     </TouchableOpacity>
                 </ScrollView>
-            </LinearGradient>
-        </ImageBackground>
+            </View>
+            <FeatureTour 
+                visible={tourVisible}
+                steps={tourSteps}
+                onComplete={() => setTourVisible(false)}
+                onSkip={() => setTourVisible(false)}
+            />
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    overlay: { flex: 1, paddingTop: 60 },
-    header: { flexDirection: 'row', alignItems: 'center', marginBottom: 40, paddingHorizontal: 20 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-    backText: { color: '#FFF', fontSize: 24 },
-    title: { fontSize: 32, color: '#FFF', fontWeight: 'bold', fontFamily: 'OpenDyslexic-Regular' },
+    container: { flex: 1, backgroundColor: DT.bg.sage },
+    overlay: { flex: 1, paddingTop: 70 },
+    header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, paddingHorizontal: 20 },
+    title: { fontSize: 30, color: DT.text.primary, fontWeight: DT.typography.weightHeavy, fontFamily: 'OpenDyslexic-Regular', letterSpacing: DT.typography.letterSpacingUI },
     
-    scroll: { paddingHorizontal: 20, paddingBottom: 50, gap: 20 },
+    scroll: { paddingHorizontal: 20, paddingBottom: 50, gap: 14 },
     card: {
         height: 100,
-        borderRadius: 20,
-        borderWidth: 2,
+        borderRadius: DT.radius.xl,
+        borderWidth: 1,
+        borderColor: DT.surface.cardBorder,
         overflow: 'hidden',
-        backgroundColor: '#FFF',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        marginBottom: 16
+        backgroundColor: DT.surface.card,
+        ...DT.shadow.soft,
+        marginBottom: 2
     },
     cardGradient: {
         flex: 1,
@@ -104,16 +127,16 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#E0E7FF',
+        backgroundColor: DT.bg.lavender,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 20,
     },
     icon: { fontSize: 30 },
     cardContent: { flex: 1 },
-    cardTitle: { fontSize: 20, fontWeight: 'bold', color: '#1E293B', fontFamily: 'OpenDyslexic-Regular' },
-    cardDesc: { fontSize: 14, color: '#64748B' },
-    locked: { opacity: 0.7 }
+    cardTitle: { fontSize: 19, fontWeight: DT.typography.weightBold, color: DT.text.primary, fontFamily: 'OpenDyslexic-Regular', letterSpacing: DT.typography.letterSpacingBody },
+    cardDesc: { fontSize: 13, color: DT.text.secondary, lineHeight: 20 },
+    locked: { opacity: 0.65 }
 });
 
 export default RhymeDashboard;

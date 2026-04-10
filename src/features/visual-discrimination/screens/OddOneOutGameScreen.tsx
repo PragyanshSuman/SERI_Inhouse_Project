@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Animated, ScrollView, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../../navigation/RootNavigator';
-import { useLanguage } from '../../../context/SettingsContext';
+import { useLanguage, useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import BackButton from '../../../components/BackButton';
+import { recordVisualDiscrim } from '../../learning-path/services/PathProgressBridge';
 import { LinearGradient } from 'expo-linear-gradient';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { generateGrid } from '../utils/gameLogic';
 import EmotionTracker from '../../../components/EmotionTracker';
+import InfoButton from '../../../components/InfoButton';
 import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
-import { useSettings } from '../../../context/SettingsContext';
 
 const { width } = Dimensions.get('window');
 
@@ -71,15 +73,18 @@ const GameTile = ({
 export default function OddOneOutGameScreen() {
   const navigation = useNavigation();
   const route = useRoute<GameScreenRouteProp>();
-  const { pairId } = route.params; 
+  const { pairId } = route.params;
   const { settings } = useSettings();
   const { language } = settings;
 
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
+  const sessionCorrect = useRef(0);
+  const sessionTotal = useRef(0);
+  const sessionStart = useRef(Date.now());
   const [gridData, setGridData] = useState<string[]>([]);
   const [targetLetter, setTargetLetter] = useState('');
-  const [tourVisible, setTourVisible] = useState(true);
+  const [tourVisible, setTourVisible] = useState(false);
   const [gameState, setGameState] = useState<'playing' | 'success' | 'failure'>('playing');
   const [key, setKey] = useState(0); 
 
@@ -150,21 +155,34 @@ export default function OddOneOutGameScreen() {
 
     if (letter === targetLetter) {
         if (timerRef.current) clearInterval(timerRef.current);
-        setScore(score + 10 + timeLeft); // Bonus for speed
+        setScore(score + 10 + timeLeft);
         setGameState('success');
         if (settings.enableSound) audioEngine.speak("Great job!", { pitch: 1.2 });
+
+        sessionCorrect.current += 1;
+        sessionTotal.current += 1;
+
+        // Every 3 correct answers, record a visual discrimination session
+        if (sessionCorrect.current % 3 === 0) {
+          const accuracy = Math.round((sessionCorrect.current / Math.max(1, sessionTotal.current)) * 100);
+          const secs = Math.round((Date.now() - sessionStart.current) / 1000);
+          recordVisualDiscrim(accuracy, secs);
+        }
+
         setTimeout(() => {
             setLevel(level + 1);
-        }, 1200); 
+        }, 1200);
     } else {
         setGameState('failure');
         if (settings.enableSound) audioEngine.speak("Oops!", { pitch: 0.8 });
-        setScore(Math.max(0, score - 5)); // Penalty
+        setScore(Math.max(0, score - 5));
+        sessionTotal.current += 1;
         setTimeout(() => {
             setGameState('playing');
         }, 800);
     }
   };
+
 
   const tourSteps: TourStep[] = [
     {
@@ -186,10 +204,9 @@ export default function OddOneOutGameScreen() {
       <LinearGradient colors={['#4F46E5', '#818CF8']} style={styles.background} />
       
       {/* Header */}
+      <BackButton color="#FFF" />
+      <InfoButton onPress={() => setTourVisible(true)} color="#FFF" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
-        </TouchableOpacity>
         
         {/* Timer Bar */}
         <View style={styles.timerContainer}>
@@ -246,8 +263,12 @@ export default function OddOneOutGameScreen() {
       <FeatureTour
         visible={tourVisible}
         steps={tourSteps}
-        onComplete={() => setTourVisible(false)}
-        onSkip={() => setTourVisible(false)}
+        onComplete={() => {
+            setTourVisible(false);
+        }}
+        onSkip={() => {
+            setTourVisible(false);
+        }}
       />
     </SafeAreaView>
   );
@@ -266,17 +287,6 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     paddingTop: 40,
-  },
-  closeButton: {
-    padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
-    zIndex: 10,
-  },
-  closeText: {
-    fontSize: 20,
-    color: '#FFF',
-    fontWeight: 'bold',
   },
   timerContainer: {
       flex: 1,

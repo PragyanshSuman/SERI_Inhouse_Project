@@ -17,12 +17,13 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   ActivityIndicator,
   AccessibilityInfo,
   Image,
+  Text as RNText,
 } from 'react-native';
+import { AppText as Text } from '../../../../components/AppText';
 import { pronunciationEngine } from '../../services/pronunciation/PronunciationEngine';
 import { segmentWord } from '../../services/pronunciation/GraphemeMapper';
 import { audioEngine } from '../../services/audio/AudioEngine';
@@ -71,8 +72,6 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
   onError,
 }) => {
   const { language } = useLanguage();
-  // Font override style
-  const fontStyle = dyslexicMode ? { fontFamily: 'OpenDyslexic-Regular' } : {};
 
   const [state, setState] = useState<CardState>({
     pronunciation: null,
@@ -354,14 +353,14 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
         ]}
       >
         <Text
-          style={[styles.wordText, fontStyle]}
+          style={styles.wordText}
           accessibilityLabel={`Word: ${word}`}
           accessibilityRole="header"
         >
           {segmentWord(pronunciation.word).map((segment, index) => (
-            <Text key={index} style={{ color: segment.color }}>
+            <RNText key={index} style={{ color: segment.color }}>
               {segment.text}
-            </Text>
+            </RNText>
           ))}
         </Text>
       </View>
@@ -370,7 +369,7 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
       <View style={[styles.phoneticContainer, state.focusMode && { opacity: 0.1 }]}>
         <Text style={styles.phoneticLabel}>{getTranslation(language, 'card_pronunciation')}</Text>
         <Text
-          style={[styles.phoneticText, fontStyle]}
+          style={styles.phoneticText}
           accessibilityLabel={`Phonetic notation: ${pronunciation.ipaNotation}`}
         >
           {pronunciation.ipaNotation}
@@ -392,7 +391,6 @@ export const PronunciationCard: React.FC<PronunciationCardProps> = ({
               <Text
                 style={[
                   styles.syllable,
-                  fontStyle,
                   state.playingSyllableIndex === index && { color: '#FF6B6B', transform: [{ scale: 1.1 }] }
                 ]}
               >

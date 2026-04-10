@@ -3,11 +3,11 @@
 import React, { useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   Animated,
 } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { colors, fonts } from '../theme';
 import { PhonemeScore } from '../types';
 

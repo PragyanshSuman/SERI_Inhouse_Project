@@ -3,29 +3,29 @@
 import React, { useMemo, useState } from 'react';
 import {
   View,
-  ImageBackground,
   StyleSheet,
   TouchableWithoutFeedback,
   Animated,
   Image,
-  Text,
   Dimensions,
   FlatList,
   Platform,
   SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { getAvailableLetters, isLetterAvailable } from '../letters';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLanguage } from '../../../context/SettingsContext';
+import { useLanguage, useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
 import EmotionTracker from '../../../components/EmotionTracker';
-
-const BG = require('../assets/images/letters/Tracing_Menu_Background.png');
+import { DT } from '../../../utils/DyslexiaTheme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -71,7 +71,8 @@ function letterAsset(letter: string) {
 export default function LetterMenuScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { language } = useLanguage();
-  const [tourVisible, setTourVisible] = useState(true);
+  const { settings } = useSettings();
+  const [tourVisible, setTourVisible] = useState(false);
 
   // Get available letters from the letter registry
   const availableLetters = useMemo(() => getAvailableLetters(), []);
@@ -84,8 +85,10 @@ export default function LetterMenuScreen() {
   const CARD_H = CARD_W; // square
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <View style={styles.bg}>
       <EmotionTracker moduleName="Tracing Menu" isActive={!tourVisible} />
+      <BackButton color={DT.accent.indigo} />
+      <InfoButton onPress={() => setTourVisible(true)} color={DT.accent.indigo} />
       <View style={styles.header}>
         <Text style={styles.title}>{getTranslation(language, 'menu_choose_letter')}</Text>
         <Text style={styles.subtitle}>
@@ -127,10 +130,14 @@ export default function LetterMenuScreen() {
           },
 
         ]}
-        onComplete={() => setTourVisible(false)}
-        onSkip={() => setTourVisible(false)}
+        onComplete={() => {
+            setTourVisible(false);
+        }}
+        onSkip={() => {
+            setTourVisible(false);
+        }}
       />
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -206,46 +213,43 @@ function LiftedCard({
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1 },
+  bg: {
+    flex: 1,
+    backgroundColor: DT.bg.skyBlue,
+  },
   header: {
-    alignItems: 'center',
-    paddingTop: 14,
-    paddingBottom: 6,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    borderBottomWidth: 1,
+    borderBottomColor: DT.surface.divider,
   },
   title: {
-    fontSize: isTablet ? 26 : 22,
-    fontWeight: '900',
-    color: '#0F172A',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 14,
+    fontSize: 28,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'OpenDyslexic-Bold',
+    letterSpacing: DT.typography.letterSpacingUI,
   },
   subtitle: {
-    fontSize: isTablet ? 14 : 12,
-    fontWeight: '700',
-    color: '#64748B',
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginTop: 6,
+    fontSize: 16,
+    color: DT.text.secondary,
+    marginTop: 4,
+    fontWeight: DT.typography.weightMedium,
   },
   grid: {
     justifyContent: 'center',
     marginTop: 10,
   },
-
-  // Container that allows both shadow layers to breathe
   cardWrap: {
     borderRadius: 22,
+    margin: GAP / 2,
   },
-
-  // Outer soft shadow (ambient)
   shadowA: {
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: DT.shadow.soft.shadowColor,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.18,
         shadowRadius: 20,
@@ -259,7 +263,6 @@ const styles = StyleSheet.create({
     top: 4,
     bottom: 0,
   },
-
   shadowDisabled: {
     ...Platform.select({
       ios: {
@@ -268,17 +271,15 @@ const styles = StyleSheet.create({
       android: { elevation: 2 },
     }),
   },
-
-  // Inner content with a tighter drop shadow; transparent background
   cardInner: {
     borderRadius: 22,
     overflow: 'visible',
-    backgroundColor: 'transparent',
+    backgroundColor: DT.surface.card,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: DT.shadow.soft.shadowColor,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.16,
         shadowRadius: 8,
@@ -287,7 +288,6 @@ const styles = StyleSheet.create({
     }),
     flex: 1,
   },
-
   cardDisabled: {
     ...Platform.select({
       ios: {
@@ -296,13 +296,11 @@ const styles = StyleSheet.create({
       android: { elevation: 2 },
     }),
   },
-
   image: {
     width: '96%',
     height: '96%',
     borderRadius: 20,
   },
-
   gloss: {
     position: 'absolute',
     left: 10,
@@ -311,25 +309,23 @@ const styles = StyleSheet.create({
     height: '40%',
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: DT.surface.softOverlay,
   },
-
   comingSoonBadge: {
     position: 'absolute',
     top: 6,
     right: 6,
-    backgroundColor: 'rgba(251,191,36,0.95)',
+    backgroundColor: DT.accent.amber,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#FBBF24',
+    borderColor: DT.surface.cardBorder,
   },
-
   comingSoonText: {
     fontSize: 9,
-    fontWeight: '800',
-    color: '#78350F',
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.onDark,
     textTransform: 'uppercase',
   },
 });

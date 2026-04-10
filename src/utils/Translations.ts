@@ -72,6 +72,9 @@ export const TRANSLATIONS = {
         trace_check_btn: "CHECK",
         trace_continue_btn: "CONTINUE",
         trace_practice_again: "PRACTICE AGAIN",
+        trace_start_button: "START",
+        trace_result_title: "Activity Complete!",
+        trace_retry_button: "PRACTICE AGAIN",
 
         // Magic Check (Phonic Check)
         magic_check_title: "Magic Check",
@@ -296,6 +299,9 @@ export const TRANSLATIONS = {
         trace_check_btn: "CHECK",
         trace_continue_btn: "தொடரவும்",
         trace_practice_again: "மீண்டும் பயிற்சி",
+        trace_start_button: "START",
+        trace_result_title: "செயல்பாடு முடிந்தது!",
+        trace_retry_button: "மீண்டும் பயிற்சி",
 
         // Magic Check (Phonic Check)
         magic_check_title: "மேஜிக் சோதனை",
@@ -520,6 +526,9 @@ export const TRANSLATIONS = {
         trace_check_btn: "CHECK",
         trace_continue_btn: "जारी रखें",
         trace_practice_again: "फिर से अभ्यास करें",
+        trace_start_button: "शुरू करें",
+        trace_result_title: "गतिविधि पूरी हुई!",
+        trace_retry_button: "फिर से अभ्यास करें",
 
         // Magic Check (Phonic Check)
         magic_check_title: "जादुई जाँच",

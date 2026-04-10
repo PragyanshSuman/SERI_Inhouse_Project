@@ -612,7 +612,12 @@ export class ShadowFeatureExtractor {
         };
 
         const REVERSAL_CONFIDENCE_THRESHOLD = 0.4;
-        const expectedIdx = letter.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+        const MAPPING_STR = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt";
+        const expectedIdx = MAPPING_STR.indexOf(letter.toUpperCase());
+        
+        if (expectedIdx === -1) {
+            return { reversalDetected: false };
+        }
 
         const transforms: Array<{ mode: 'h'|'v'|'r'; type: MLFeatures['reversalType'] }> = [
             { mode: 'h', type: 'horizontal_flip' },

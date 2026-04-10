@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Animated, PanResponder, Easing } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Animated, PanResponder, Easing } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../../navigation/RootNavigator';
-import { useLanguage } from '../../../context/SettingsContext'; // Backward compat
-import { useSettings } from '../../../context/SettingsContext'; // New hook
+import { useLanguage, useSettings } from '../../../context/SettingsContext'; // Backwards compat and new hook
 import { getTranslation } from '../../../utils/Translations';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { Audio } from 'expo-av';
@@ -217,7 +219,7 @@ export default function LetterSortingGameScreen() {
     const navigation = useNavigation();
     const route = useRoute<GameScreenRouteProp>();
     const { pairId } = route.params;
-    const { settings } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const { language } = settings;
     
     const safePairId = pairId || 'b_d';
@@ -227,7 +229,7 @@ export default function LetterSortingGameScreen() {
     const [currentLetter, setCurrentLetter] = useState('');
     const currentLetterRef = useRef('');
 
-    const [tourVisible, setTourVisible] = useState(true);
+    const [tourVisible, setTourVisible] = useState(false);
     const [mouthStateL, setMouthStateL] = useState<'idle' | 'open' | 'eating'>('idle');
     const [mouthStateR, setMouthStateR] = useState<'idle' | 'open' | 'eating'>('idle');
     const [isDragging, setIsDragging] = useState(false);
@@ -275,9 +277,8 @@ export default function LetterSortingGameScreen() {
             if (targetBucket === l1) setMouthStateL('eating');
             else setMouthStateR('eating');
             setCelebrate(true);
-            
             Animated.timing(scale, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
-                setTimeout(generateNextLetter, 500); 
+                setTimeout(generateNextLetter, 500);
             });
         } else {
             if (settings.enableSound) audioEngine.speak("Oops!", { pitch: 1.2 });
@@ -361,10 +362,9 @@ export default function LetterSortingGameScreen() {
             <EmotionTracker moduleName="Letter Sorting" isActive={!tourVisible} />
             <LinearGradient colors={['#1E1B4B', '#312E81']} style={styles.background} />
             
+            <BackButton color="#FFF" />
+            <InfoButton onPress={() => setTourVisible(true)} color="#FFF" />
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-                    <Text style={styles.closeText}>✕</Text>
-                </TouchableOpacity>
                 <View style={[styles.scoreBadge, { backgroundColor: '#4338CA' }]}>
                      <Text style={styles.scoreText}>SCORE: {score}</Text>
                 </View>
@@ -434,8 +434,12 @@ export default function LetterSortingGameScreen() {
             <FeatureTour
                 visible={tourVisible}
                 steps={tourSteps}
-                onComplete={() => setTourVisible(false)}
-                onSkip={() => setTourVisible(false)}
+                onComplete={() => {
+                    setTourVisible(false);
+                }}
+                onSkip={() => {
+                    setTourVisible(false);
+                }}
             />
         </SafeAreaView>
     );
@@ -445,8 +449,6 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
     header: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, paddingTop: 40, zIndex: 10 },
-    closeButton: { padding: 12, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 24, width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-    closeText: { fontSize: 24, color: '#FFF', fontWeight: 'bold', lineHeight: 26 },
     scoreBadge: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
     scoreText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
     

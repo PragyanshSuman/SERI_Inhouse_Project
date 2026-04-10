@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   SafeAreaView,
   StatusBar,
@@ -9,18 +8,18 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
-  ImageBackground
+  Platform,
 } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import BackButton from '../../../components/BackButton';
 import EmotionTracker from '../../../components/EmotionTracker';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 const PhonicCheckResultScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { result, word, source } = route.params;
-
-  // Shared background
-  const BACKGROUND_IMAGE = require('../../letter-tracing/assets/images/background_for_initial_home_screen.png');
 
   // Animation Refs
   const scoreAnim = useRef(new Animated.Value(0)).current;
@@ -44,9 +43,9 @@ const PhonicCheckResultScreen = () => {
   }, []);
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return '#10B981'; // Green
-    if (score >= 50) return '#F59E0B'; // Orange
-    return '#EF4444'; // Red
+    if (score >= 80) return DT.text.success; 
+    if (score >= 50) return DT.accent.amber;
+    return DT.text.error;
   };
 
   const scale = scoreAnim.interpolate({
@@ -55,26 +54,24 @@ const PhonicCheckResultScreen = () => {
   });
 
   return (
-    <ImageBackground source={BACKGROUND_IMAGE} style={styles.bg} resizeMode="cover">
-    <EmotionTracker moduleName="Magic Check Result" isActive={true} />
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <EmotionTracker moduleName="Phonic Check Result" isActive={true} />
+      <StatusBar barStyle="dark-content" backgroundColor={DT.bg.sage} />
+      <BackButton 
+        onPress={() => navigation.goBack()}
+        color={DT.accent.navy} 
+      />
       
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                 <Text style={styles.backText}>← Back</Text>
-            </TouchableOpacity>
+        <View style={styles.headerText}>
+          <Text style={styles.subtitle}>Result for</Text>
+          <Text style={styles.wordTitle}>{word}</Text>
         </View>
-
-        <Text style={styles.subtitle}>Result for</Text>
-        <Text style={styles.wordTitle}>{word}</Text>
-
 
         {/* Error State or Missing Data */}
         {!result.phonemes && (
-            <View style={[styles.scoreCard, { backgroundColor: '#FEE2E2' }]}>
-                <Text style={[styles.verdict, { color: '#DC2626' }]}>{result.error || "Analysis Error"}</Text>
+            <View style={[styles.scoreCard, { backgroundColor: DT.bg.blush, borderColor: DT.text.error }]}>
+                <Text style={[styles.verdict, { color: DT.text.error }]}>{result.error || "Analysis Error"}</Text>
                 <Text style={styles.tips}>We couldn't process the audio properly.</Text>
             </View>
         )}
@@ -91,19 +88,16 @@ const PhonicCheckResultScreen = () => {
           <Text style={styles.verdict}>{result.verdict}</Text>
           <Text style={styles.tips}>"{result.tips}"</Text>
 
-          {/* Simple Confetti for High Score */}
+          {/* Simple Confetti for High Score (Visual Polish) */}
           {result.word_accuracy >= 80 && (
              <View style={styles.confettiContainer}>
                 {[...Array(5)].map((_, i) => (
                     <View key={i} style={[styles.confetti, { 
-                        left: i * 50, 
-                        top: -10,
-                        backgroundColor: i % 2 === 0 ? '#10B981' : '#F59E0B' 
+                        backgroundColor: i % 2 === 0 ? DT.text.success : DT.accent.amber 
                     }]} />
                 ))}
              </View>
           )}
-
         </Animated.View>
         )}
 
@@ -122,14 +116,11 @@ const PhonicCheckResultScreen = () => {
         </Animated.View>
         )}
         
-        {/* Transcription Debug Info */}
+        {/* Transcription Info */}
         {result.transcription_heard && (
             <View style={styles.debugBox}>
                 <Text style={styles.debugLabel}>We heard:</Text>
                 <Text style={styles.debugText}>"{result.transcription_heard}"</Text>
-                {result.debug_ctc_loss !== undefined && (
-                   <Text style={[styles.debugLabel, { marginTop: 4, fontSize: 10 }]}>Confidence (CTC): {result.debug_ctc_loss}</Text>
-                )}
             </View>
         )}
 
@@ -140,12 +131,9 @@ const PhonicCheckResultScreen = () => {
           style={styles.doneButton} 
           onPress={() => {
               if (source === 'Practice') {
-                  // If coming from Practice, we want a new word (refresh)
-                  // Use navigate to go back to existing screen with params
                   //@ts-ignore
                   navigation.navigate('Practice', { refresh: true });
               } else {
-                  // If coming from Dashboard (or elsewhere), just go back to input
                   navigation.goBack();
               }
           }}
@@ -155,105 +143,95 @@ const PhonicCheckResultScreen = () => {
       </View>
 
     </SafeAreaView>
-    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  bg: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: DT.bg.sage,
   },
   scrollContent: {
     padding: 24,
     alignItems: 'center',
     paddingTop: 40,
+    paddingBottom: 40,
   },
-  header: {
-      width: '100%',
-      alignItems: 'flex-start',
-      marginBottom: 10,
-  },
-  backButton: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  backText: {
-    fontSize: 16,
-    color: '#4F46E5',
-    fontWeight: '700',
+  headerText: {
+    alignItems: 'center',
+    marginBottom: 32,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748B',
+    color: DT.text.secondary,
+    fontWeight: DT.typography.weightMedium,
     marginBottom: 4,
+    textAlign: 'center',
   },
   wordTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#1E293B',
-    marginBottom: 32,
+    fontSize: 34,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
     textTransform: 'capitalize',
+    letterSpacing: DT.typography.letterSpacingUI,
+    fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'sans-serif-rounded',
+    textAlign: 'center',
   },
   scoreCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.xl,
     padding: 32,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 4,
+    ...DT.shadow.medium,
+    borderWidth: 2,
+    borderColor: DT.surface.cardBorder,
     marginBottom: 32,
     overflow: 'hidden',
   },
   scoreCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    minWidth: 160,
+    minHeight: 160,
+    borderRadius: 80,
+    paddingHorizontal: 20,
     borderWidth: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+    backgroundColor: DT.bg.cream,
   },
   scoreValue: {
     fontSize: 40,
-    fontWeight: '800',
+    fontWeight: DT.typography.weightHeavy,
   },
   scoreLabel: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: DT.text.muted,
     textTransform: 'uppercase',
-    fontWeight: '700',
+    fontWeight: DT.typography.weightBold,
     marginTop: 4,
+    textAlign: 'center',
   },
   verdict: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
     marginBottom: 8,
+    textAlign: 'center',
   },
   tips: {
     fontSize: 16,
-    color: '#64748B',
+    color: DT.text.secondary,
     textAlign: 'center',
-    fontStyle: 'italic',
+    lineHeight: DT.typography.lineHeightBody,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontSize: 20,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
     marginBottom: 16,
     alignSelf: 'flex-start',
+    letterSpacing: DT.typography.letterSpacingUI,
   },
   phonemeContainer: {
     flexDirection: 'row',
@@ -264,63 +242,69 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   phonemeBox: {
-    width: 60,
-    height: 70,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    minWidth: 65,
+    minHeight: 75,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: DT.radius.md,
+    backgroundColor: DT.surface.card,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    ...DT.shadow.soft,
   },
   phonemeText: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: 26,
+    fontWeight: DT.typography.weightHeavy,
+    marginBottom: 2,
+    textAlign: 'center',
   },
   phonemeScore: {
     fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '600',
+    color: DT.text.muted,
+    fontWeight: DT.typography.weightBold,
+    textAlign: 'center',
   },
   debugBox: {
       padding: 16,
-      backgroundColor: '#E2E8F0',
-      borderRadius: 12,
+      backgroundColor: DT.bg.stone,
+      borderRadius: DT.radius.md,
       width: '100%',
       alignItems: 'center',
+      borderWidth: 1,
+      borderColor: DT.surface.cardBorder,
   },
   debugLabel: {
       fontSize: 12,
-      color: '#64748B',
+      color: DT.text.muted,
       marginBottom: 4,
+      textTransform: 'uppercase',
+      fontWeight: DT.typography.weightBold,
   },
   debugText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#475569',
+    fontSize: 18,
+    fontWeight: DT.typography.weightMedium,
+    color: DT.text.secondary,
     fontStyle: 'italic',
   },
   footer: {
     padding: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: DT.bg.sage,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: DT.surface.divider,
   },
   doneButton: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 16,
+    backgroundColor: DT.accent.navy,
+    borderRadius: DT.radius.lg,
     paddingVertical: 18,
     alignItems: 'center',
+    ...DT.shadow.medium,
   },
   doneButtonText: {
-    color: '#FFFFFF',
+    color: DT.text.onDark,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: DT.typography.weightHeavy,
+    letterSpacing: DT.typography.letterSpacingUI,
   },
   confettiContainer: {
       position: 'absolute',
@@ -329,12 +313,13 @@ const styles = StyleSheet.create({
       right: 0,
       flexDirection: 'row',
       justifyContent: 'space-around',
-      opacity: 0.3
+      opacity: 0.2
   },
   confetti: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginTop: 10,
   }
 });
 

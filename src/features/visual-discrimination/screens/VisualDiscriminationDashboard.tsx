@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/RootNavigator';
-import { useLanguage } from '../../../context/SettingsContext';
+import { useLanguage, useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
 import { LinearGradient } from 'expo-linear-gradient';
+import BackButton from '../../../components/BackButton';
+import InfoButton from '../../../components/InfoButton';
 import EmotionTracker from '../../../components/EmotionTracker';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VisualDiscriminationDashboard'>;
 
@@ -23,7 +27,8 @@ const CONFUSION_PAIRS = [
 export default function VisualDiscriminationDashboard() {
   const navigation = useNavigation<NavigationProp>();
   const { language } = useLanguage();
-  const [tourVisible, setTourVisible] = useState(true);
+  const { settings } = useSettings();
+  const [tourVisible, setTourVisible] = useState(false);
 
   const tourSteps: TourStep[] = [
     {
@@ -50,14 +55,13 @@ export default function VisualDiscriminationDashboard() {
     <SafeAreaView style={styles.container}>
       <EmotionTracker moduleName="Visual Discrimination Dashboard" isActive={!tourVisible} />
       <LinearGradient
-        colors={['#E0F2FE', '#F0F9FF']}
+        colors={DT.gradient.sky}
         style={styles.background}
       />
       
+      <BackButton color="#0F172A" />
+      <InfoButton onPress={() => setTourVisible(true)} color="#0F172A" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-             <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
         <View>
              <Text style={styles.title}>{getTranslation(language, 'module_visual_discrimination')}</Text>
              <Text style={styles.subtitle}>{getTranslation(language, 'module_visual_discrimination_desc')}</Text>
@@ -76,9 +80,9 @@ export default function VisualDiscriminationDashboard() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.cardGradient}
             >
-                <View style={[styles.iconContainer, { backgroundColor: '#DBEAFE' }]}>
-                    <Text style={styles.iconText}>{pair.label}</Text>
-                </View>
+                <View style={[styles.iconContainer, { backgroundColor: DT.bg.skyBlue }]}>
+                  <Text style={styles.iconText}>{pair.label}</Text>
+              </View>
                 <Text style={styles.cardLabel}>{pair.label}</Text>
                 <Text style={styles.playText}>▶ {getTranslation(language, 'play')}</Text>
             </LinearGradient>
@@ -89,8 +93,12 @@ export default function VisualDiscriminationDashboard() {
       <FeatureTour
         visible={tourVisible}
         steps={tourSteps}
-        onComplete={() => setTourVisible(false)}
-        onSkip={() => setTourVisible(false)}
+        onComplete={() => {
+            setTourVisible(false);
+        }}
+        onSkip={() => {
+            setTourVisible(false);
+        }}
       />
     </SafeAreaView>
   );
@@ -99,6 +107,7 @@ export default function VisualDiscriminationDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DT.bg.skyBlue,
   },
   background: {
     position: 'absolute',
@@ -109,27 +118,21 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 24,
+    paddingTop: 64,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
-    marginRight: 16,
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#0F172A',
-  },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontWeight: DT.typography.weightBold,
+    color: DT.text.primary,
+    letterSpacing: DT.typography.letterSpacingUI,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#475569',
+    fontSize: 15,
+    color: DT.text.secondary,
+    lineHeight: DT.typography.lineHeightBody,
+    marginTop: 2,
   },
   gridContainer: {
     padding: 16,
@@ -139,23 +142,20 @@ const styles = StyleSheet.create({
   },
   card: {
     width: (width - 48) / 2,
-    aspectRatio: 1, // Square cards
+    aspectRatio: 1,
     marginBottom: 16,
-    borderRadius: 24,
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: DT.radius.xl,
+    ...DT.shadow.soft,
   },
   cardGradient: {
     flex: 1,
-    borderRadius: 24,
+    borderRadius: DT.radius.xl,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: DT.surface.cardBorder,
+    backgroundColor: DT.surface.card,
   },
   iconContainer: {
     width: 80,
@@ -168,17 +168,19 @@ const styles = StyleSheet.create({
   iconText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2563EB',
+    color: DT.accent.sky,
+    letterSpacing: 2,
   },
   cardLabel: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: DT.typography.weightBold,
+    color: DT.text.primary,
     marginBottom: 8,
+    letterSpacing: DT.typography.letterSpacingBody,
   },
   playText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2563EB',
+    fontWeight: DT.typography.weightMedium,
+    color: DT.accent.sky,
   },
 });

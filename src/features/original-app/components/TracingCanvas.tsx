@@ -16,8 +16,8 @@ import { CANVAS_CONFIG } from '../constants/LetterPaths';
 interface TracingCanvasProps {
   idealPath: IdealPathData;
   activeStrokeIndex: number;
-  letterStrokes: any[];
-  onTouchStart?: () => void;
+  letterStrokes?: any[];
+  onTouchStart?: (x: number, y: number) => void;
   onTouchMove?: (x: number, y: number, pressure: number) => void;
   onTouchEnd?: () => void;
   showGuidelines?: boolean;
@@ -27,9 +27,13 @@ interface TracingCanvasProps {
   showHand?: boolean;
   showStrokeHints?: boolean;
   autoPlay?: boolean;
+  isDemo?: boolean; // Support both names for flexibility
   showGrid?: boolean;
   showActiveStrokeBackground?: boolean;
   showActiveStrokeGuide?: boolean;
+  isBareMode?: boolean; // New minimalism mode
+  letterPath?: any; // To prevent error if passed, though we should handle it
+  resetTrigger?: number; // External trigger to clear the canvas
 }
 
 const TracingCanvas: React.FC<TracingCanvasProps> = ({
@@ -46,15 +50,24 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
   showHand = true,
   showStrokeHints = true,
   autoPlay = false,
+  isDemo = false,
   showGrid = true,
   showActiveStrokeBackground = true,
   showActiveStrokeGuide = true,
+  isBareMode = false,
+  resetTrigger = 0,
 }) => {
   const [userPath, setUserPath] = useState<Array<{ x: number; y: number }>>([]);
   const [currentPosition, setCurrentPosition] = useState<{ x: number; y: number } | null>(null);
   const [permanentPaths, setPermanentPaths] = useState<string[]>([]);
 
   const pathRef = useRef<Array<{ x: number; y: number }>>([]);
+  
+  // Fix stale PanResponder closures
+  const propsRef = useRef({ autoPlay, activeStrokeIndex, onTouchStart, onTouchMove, onTouchEnd, onStrokeComplete });
+  useEffect(() => {
+    propsRef.current = { autoPlay, activeStrokeIndex, onTouchStart, onTouchMove, onTouchEnd, onStrokeComplete };
+  });
 
   // Auto-play animation state
   const autoPlayAnim = useRef(new Animated.Value(0)).current;
@@ -64,13 +77,13 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
     setPermanentPaths([]);
     setUserPath([]);
     pathRef.current = [];
-  }, [idealPath]);
+  }, [idealPath, resetTrigger]);
 
   // Hand / auto-play animation
   useEffect(() => {
-    if (!showHand) return;
+    if (!showHand || !idealPath) return;
 
-    if (autoPlay) {
+    if (autoPlay || isDemo) {
       Animated.loop(
         Animated.timing(autoPlayAnim, {
           toValue: 1,
@@ -81,17 +94,19 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
       ).start();
 
       const listenerId = autoPlayAnim.addListener(({ value }) => {
-        if (!idealPath.points || idealPath.points.length === 0) return;
+        if (!idealPath || !idealPath.points || idealPath.points.length === 0) return;
         const totalPoints = idealPath.points.length;
         const index = Math.min(Math.floor(value * totalPoints), totalPoints - 1);
         const point = idealPath.points[index];
         if (point) {
           setDemoHandPos({ x: point.x, y: point.y });
           let currentStrokeIndex = 0;
-          for (let i = 0; i < idealPath.strokeBoundaries.length - 1; i++) {
-            if (index >= idealPath.strokeBoundaries[i] && index < idealPath.strokeBoundaries[i + 1]) {
-              currentStrokeIndex = i;
-              break;
+          if (idealPath.strokeBoundaries && idealPath.strokeBoundaries.length > 0) {
+            for (let i = 0; i < idealPath.strokeBoundaries.length - 1; i++) {
+              if (index >= idealPath.strokeBoundaries[i] && index < idealPath.strokeBoundaries[i + 1]) {
+                currentStrokeIndex = i;
+                break;
+              }
             }
           }
           const newPermanentPaths: string[] = [];
@@ -112,7 +127,7 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
         setUserPath([]);
       };
     } else {
-      if (!showGuidelines) return;
+      if (!showGuidelines || !idealPath) return;
       handAnim.setValue(0);
       const animation = Animated.loop(
         Animated.sequence([
@@ -126,9 +141,10 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
   }, [activeStrokeIndex, showHand, autoPlay, idealPath]);
 
   const getHandPosition = () => {
-    if (autoPlay) return demoHandPos;
+    if (autoPlay || isDemo) return demoHandPos;
+    if (!idealPath || !idealPath.points || !idealPath.strokeBoundaries) return null;
     if (activeStrokeIndex >= idealPath.strokeBoundaries.length) return null;
-    const startIdx = activeStrokeIndex === 0 ? 0 : idealPath.strokeBoundaries[activeStrokeIndex - 1];
+    const startIdx = activeStrokeIndex === 0 ? 0 : idealPath.strokeBoundaries[activeStrokeIndex]; // Corrected index logic
     return idealPath.points[startIdx];
   };
 
@@ -161,51 +177,64 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
   const offsetX = (width - renderedWidth) / 2;
   const offsetY = (height - renderedHeight) / 2;
 
-  const getSvgCoordinates = (locationX: number, locationY: number) => {
-    const relativeX = (locationX - offsetX) / scale;
-    const relativeY = (locationY - offsetY) / scale;
-    return { x: relativeX + viewBoxMinX, y: relativeY + viewBoxMinY };
+  // Function to map screen coordinates to SVG coordinates (zoom-aware)
+  const getSvgCoordinates = (screenX: number, screenY: number) => {
+    // Add aggressive ergonomic Y-offset to explicitly counter Android PanResponder
+    // locationY calculation bugs with SafeAreaViews AND to bring the ink up to the tip.
+    const fingertipOffsetY = 80; 
+    
+    const relativeX = (screenX - offsetX) / scale;
+    const relativeY = ((screenY - fingertipOffsetY) - offsetY) / scale;
+    return { 
+        x: relativeX + viewBoxMinX, 
+        y: relativeY + viewBoxMinY 
+    };
   };
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !autoPlay,
-      onMoveShouldSetPanResponder: () => !autoPlay,
+      onStartShouldSetPanResponder: () => !propsRef.current.autoPlay,
+      onMoveShouldSetPanResponder: () => !propsRef.current.autoPlay,
       onPanResponderGrant: (evt: GestureResponderEvent) => {
-        if (autoPlay) return;
+        if (propsRef.current.autoPlay) return;
+        pathRef.current = [];
         const { locationX, locationY } = evt.nativeEvent;
         const { x, y } = getSvgCoordinates(locationX, locationY);
-        pathRef.current = [{ x, y }];
-        setUserPath([{ x, y }]);
-        setCurrentPosition({ x, y });
-        onTouchStart?.();
-      },
-      onPanResponderMove: (evt: GestureResponderEvent, _gs: PanResponderGestureState) => {
-        if (autoPlay) return;
-        const { locationX, locationY } = evt.nativeEvent;
-        const force = (evt.nativeEvent as any).force || 1;
-        const { x, y } = getSvgCoordinates(locationX, locationY);
+        
         pathRef.current.push({ x, y });
         setUserPath([...pathRef.current]);
         setCurrentPosition({ x, y });
-        // Just pass data to the shadow engine — no on-track checking
-        onTouchMove?.(x, y, force);
+        
+        // Pass SVG coords to parent for analysis using the latest function reference
+        propsRef.current.onTouchStart?.(x, y);
+      },
+      onPanResponderMove: (evt: GestureResponderEvent, _gs: PanResponderGestureState) => {
+        if (propsRef.current.autoPlay) return;
+        const { locationX, locationY } = evt.nativeEvent;
+        const force = (evt.nativeEvent as any).force || 1.0;
+        const { x, y } = getSvgCoordinates(locationX, locationY);
+        
+        pathRef.current.push({ x, y });
+        setUserPath([...pathRef.current]);
+        setCurrentPosition({ x, y });
+        
+        propsRef.current.onTouchMove?.(x, y, force);
       },
       onPanResponderRelease: () => {
-        if (autoPlay) return;
+        if (propsRef.current.autoPlay) return;
         const pointsToSave = [...pathRef.current];
         if (pointsToSave.length > 5) {
           setPermanentPaths(prev => [...prev, generateSVGPath(pointsToSave)]);
-          // Always record the stroke regardless of accuracy — ML will evaluate
-          onStrokeComplete?.(activeStrokeIndex);
+          // Use latest known stroke index
+          propsRef.current.onStrokeComplete?.(propsRef.current.activeStrokeIndex);
         }
         setUserPath([]);
         pathRef.current = [];
         setCurrentPosition(null);
-        onTouchEnd?.();
+        propsRef.current.onTouchEnd?.();
       },
       onPanResponderTerminate: () => {
-        if (autoPlay) return;
+        if (propsRef.current.autoPlay) return;
         const pointsToSave = [...pathRef.current];
         if (pointsToSave.length > 5) {
           setPermanentPaths(prev => [...prev, generateSVGPath(pointsToSave)]);
@@ -213,7 +242,7 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
         setUserPath([]);
         pathRef.current = [];
         setCurrentPosition(null);
-        onTouchEnd?.();
+        propsRef.current.onTouchEnd?.();
       },
     })
   ).current;
@@ -239,7 +268,8 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
   };
 
   const getArrowInfo = () => {
-    if (activeStrokeIndex >= idealPath.strokeBoundaries.length - 1) return null;
+    if (!idealPath || !idealPath.strokeBoundaries || !idealPath.points) return null;
+    if (activeStrokeIndex < 0 || activeStrokeIndex >= idealPath.strokeBoundaries.length - 1) return null;
     const endIdx = idealPath.strokeBoundaries[activeStrokeIndex + 1] - 1;
     if (endIdx < 5 || endIdx >= idealPath.points.length) return null;
     const p2 = idealPath.points[endIdx];
@@ -254,8 +284,9 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
   const arrowInfo = getArrowInfo();
 
   return (
-    <View style={[styles.container, { width, height }]} {...panResponder.panHandlers}>
+    <View style={[styles.container, { width, height, backgroundColor: isBareMode ? '#1C2938' : '#131F24' }]} {...panResponder.panHandlers}>
       <Svg
+        pointerEvents="none"
         width={width}
         height={height}
         viewBox={`${viewBoxMinX} ${viewBoxMinY} ${zoomedViewBoxWidth} ${zoomedViewBoxHeight}`}
@@ -269,7 +300,7 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
         </Defs>
 
         {/* Grid lines */}
-        {showGuidelines && showGrid && (
+        {showGuidelines && showGrid && !isBareMode && (
           <G opacity={0.2}>
             <Line x1={0} y1={CANVAS_CONFIG.baseline} x2={CANVAS_CONFIG.width} y2={CANVAS_CONFIG.baseline} stroke="#52656d" strokeWidth={2} strokeDasharray="10,10" />
             <Line x1={CANVAS_CONFIG.centerX} y1={0} x2={CANVAS_CONFIG.centerX} y2={CANVAS_CONFIG.height} stroke="#52656d" strokeWidth={2} strokeDasharray="10,10" />
@@ -278,16 +309,16 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
         )}
 
         {/* Ghost template — all strokes faint */}
-        {showGuidelines && (
-          <G opacity={0.15}>
+        {idealPath && idealPath.strokeBoundaries && (
+          <G opacity={isBareMode ? 0.08 : 0.15}>
             {idealPath.strokeBoundaries.slice(0, -1).map((_, idx) => (
-              <Path key={`stroke-${idx}`} d={getStrokePath(idx)} stroke="#BCBCBC" strokeWidth={40} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <Path key={`stroke-${idx}`} d={getStrokePath(idx)} stroke={isBareMode ? "#fff" : "#BCBCBC"} strokeWidth={isBareMode ? 45 : 40} fill="none" strokeLinecap="round" strokeLinejoin="round" />
             ))}
           </G>
         )}
 
         {/* Stroke number hints */}
-        {showGuidelines && showStrokeHints && idealPath.strokeBoundaries.slice(0, -1).map((_, idx) => {
+        {showGuidelines && showStrokeHints && !isBareMode && idealPath.strokeBoundaries.slice(0, -1).map((_, idx) => {
           const startPoint = idealPath.points[idealPath.strokeBoundaries[idx]];
           if (!startPoint) return null;
           return (
@@ -299,7 +330,7 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
         })}
 
         {/* Active stroke visual guide */}
-        {showGuidelines && activeStrokeIndex < idealPath.strokeBoundaries.length && (
+        {showGuidelines && !isBareMode && idealPath && activeStrokeIndex >= 0 && activeStrokeIndex < idealPath.strokeBoundaries.length && (
           <G>
             {showActiveStrokeBackground && (
               <Path d={getStrokePath(activeStrokeIndex)} stroke="#2b3b45" strokeWidth={22} fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -351,7 +382,7 @@ const TracingCanvas: React.FC<TracingCanvasProps> = ({
       </Svg>
 
       {/* Animated hand */}
-      {showGuidelines && showHand && handPos && (
+      {showGuidelines && showHand && !isBareMode && handPos && (
         <View style={{ position: 'absolute', left: 0, top: 0, width, height, pointerEvents: 'none' }}>
           <Animated.View
             style={{

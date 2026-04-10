@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
@@ -9,32 +8,30 @@ import {
   ActivityIndicator,
   ScrollView,
   Modal,
+  StatusBar,
+  Platform,
+  Dimensions,
 } from 'react-native';
+import { Svg, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { AppText as Text } from '../../../components/AppText';
 import TracingCanvas from '../components/TracingCanvas';
 import AudioButton from '../components/AudioButton';
-import LetterDisplay from '../components/LetterDisplay';
 import { useTracingSession } from '../hooks/useTracingSession';
 import { LETTER_PATHS } from '../constants/LetterPaths';
 import { LetterPath } from '../models/TracingData';
 import StorageService from '../services/StorageService';
-import { Dimensions } from 'react-native';
-import FeatureTour, { TourStep } from '../../../components/FeatureTour';
-import { useLanguage } from '../../../context/SettingsContext';
+import { useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
 import EmotionTracker from '../../../components/EmotionTracker';
-
-
-
-
+import InfoButton from '../../../components/InfoButton';
+import BackButton from '../../../components/BackButton';
+import FeatureTour, { TourStep } from '../../../components/FeatureTour';
+import { DT } from '../../../utils/DyslexiaTheme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Responsive Dimensions
-// Maximize width and height within safe bounds, do NOT force aspect ratio here.
-// The Canvas component handles "meet" scaling (letterboxing).
-const CANVAS_WIDTH = Math.min(SCREEN_WIDTH - 20, 600); // 10px margin/side, max 600
-const CANVAS_HEIGHT = Math.min(SCREEN_HEIGHT * 0.70, 800); // Max 70% height, max 800
-
+const CANVAS_WIDTH = Math.min(SCREEN_WIDTH - 24, 900);
+const CANVAS_HEIGHT = Math.min(SCREEN_HEIGHT * 0.82, 1200);
 
 interface TracingScreenProps {
   letter: string;
@@ -49,30 +46,23 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
   onComplete,
   onExit,
 }) => {
-  const { language } = useLanguage();
+  const { settings } = useSettings();
+  const { language } = settings;
   const letterPath: LetterPath = LETTER_PATHS[letter.toUpperCase()];
   
-  const [showInstructions, setShowInstructions] = useState(true);
-  const [introTourVisible, setIntroTourVisible] = useState(true);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [introTourVisible, setIntroTourVisible] = useState(false);
   const [tracingTourVisible, setTracingTourVisible] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [sessionAnalytics, setSessionAnalytics] = useState<any>(null);
   const [isDemoVisible, setIsDemoVisible] = useState(false);
+  const [resetTrigger, setResetTrigger] = useState(0);
 
-  // Trigger tracing tour when instructions view is dismissed
   useEffect(() => {
-    if (!showInstructions) {
-        // Find a way to delay slightly for transition? Or just set it.
-        // A small timeout feels better for UI transition
-        const timer = setTimeout(() => {
-            setTracingTourVisible(true);
-        }, 500);
-        return () => clearTimeout(timer);
-    }
-  }, [showInstructions]);
+    initializeSession();
+  }, [letter]);
 
-  // User demographics (would come from user profile)
   const userDemographics = {
     chronological_age: 7,
     chronological_age_months: 84,
@@ -105,88 +95,41 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
     userDemographics,
   });
 
-  // Removed canvasRef as state is managed by props and hooks
-
-
-  useEffect(() => {
-    // Initialize session on mount
-    initializeSession();
-  }, []);
-
-  /**
-   * Start tracing session
-   */
-  const handleStartTracing = () => {
-    setShowInstructions(false);
-    startTracing();
+  const handleClear = () => {
+    resetSession();
+    setResetTrigger(prev => prev + 1);
   };
 
-  /**
-   * Complete session with ML validation
-   * 
-   * HYBRID APPROACH:
-   * - Template remains visible in TracingCanvas for visual guidance
-   * - ML model (via ShadowFeatureExtractor) validates character correctness
-   * - All biomechanical features (jerk, tremor, etc.) calculated independently
-   */
-  const handleComplete = async () => {
-    setIsCompleting(true);
+  const handleRetry = () => {
+    resetSession();
+    setShowResults(false);
+    setShowInstructions(false);
+    initializeSession();
+  };
 
+  const handleFinish = async () => {
+    setIsCompleting(true);
     try {
-      // Get session analytics (includes ML validation from ShadowFeatureExtractor)
-      const result = await endSession('completed');
-      if (result) {
-        // result.mlFeatures contains ML-based character recognition
-        // result.features contains all biomechanical metrics (unchanged)
-        setSessionAnalytics(result);
-        setShowResults(true);
-        onComplete?.(result);
-        
-        // Auto-export for study
-        await StorageService.exportToJSON(result);
+      const report = await endSession('completed');
+      if (report) {
+          setSessionAnalytics(report);
+          setShowResults(true);
       }
     } catch (error) {
-      console.error('Failed to complete session:', error);
-      Alert.alert('Error', 'Failed to save session data');
+      console.error('Failed to end session:', error);
+      Alert.alert('Analysis Failed', 'There was an issue generating your report.');
     } finally {
       setIsCompleting(false);
     }
   };
 
-  /**
-   * Retry tracing
-   */
-  const handleRetry = () => {
-    resetSession();
-    setShowResults(false);
-    setShowInstructions(true);
-    initializeSession();
-  };
-
-  /**
-   * Export analytics
-   */
-  const handleExport = async () => {
-    if (!sessionAnalytics) return;
-
-    try {
-      const jsonPath = await StorageService.exportToJSON(sessionAnalytics);
-      const csvPath = await StorageService.exportToCSV(sessionAnalytics);
-      
-      Alert.alert(
-        'Export Successful',
-        `Files saved:\n${jsonPath}\n${csvPath}`,
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Export failed:', error);
-      Alert.alert('Error', 'Failed to export analytics');
+  const handleOpenDemo = () => {
+    if (!sessionStarted) {
+        initializeSession();
     }
+    setIsDemoVisible(true);
   };
 
-  /**
-   * Exit screen
-   */
   const handleExit = () => {
     if (isActive && !showResults) {
       Alert.alert(
@@ -212,801 +155,726 @@ const TracingScreen: React.FC<TracingScreenProps> = ({
   if (!idealPath) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#58CC02" />
+        <ActivityIndicator size="large" color={DT.accent.sky} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <EmotionTracker moduleName="Legacy Tracing" isActive={!showInstructions && !showResults} />
+    <View style={styles.container}>
+      <EmotionTracker moduleName="Letter Mastery" isActive={!introTourVisible && !tracingTourVisible} />
+      <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={DT.bg.skyBlue} />
+      <BackButton onPress={onExit} color={DT.accent.navy} />
+      <InfoButton onPress={() => setIntroTourVisible(true)} color={DT.accent.navy} />
+      
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleExit} style={styles.exitButton}>
-          <Text style={styles.exitButtonText}>✕</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-            style={styles.headerWatchButton}
-            onPress={() => setIsDemoVisible(true)}
-        >
-            <Text style={styles.headerWatchText}>👁️</Text>
-        </TouchableOpacity>
-        
-        {/* Progress Bar (Mock) */}
         {!showInstructions && !showResults && (
-            <View style={styles.progressBarContainer}>
-                <View style={[styles.progressBarFill, { width: `${((activeStrokeIndex) / letterPath.strokes.length) * 100}%` }]} />
-            </View>
+           <View style={styles.headerTitleRow}>
+           </View>
         )}
-        
-        {/* Placeholder for balance */}
-        <View style={styles.placeholder} />
       </View>
 
-      {/* Instructions Screen */}
-      {showInstructions && (
-        <View style={styles.instructionsContainer}>
-           <Text style={styles.instructionTitle}>{getTranslation(language, 'trace_lets_learn')}</Text>
-           <Text style={styles.mainLetterTitle}>{letter}</Text>
-           
-           <View style={styles.audioSection}>
-             <AudioButton
-               letter={letter}
-               onPlayStart={handleAudioPlay}
-               size={120}
-             />
-             <Text style={styles.instructionText}>{getTranslation(language, 'trace_tap_listen')}</Text>
-           </View>
 
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={handleStartTracing}
-          >
-            <Text style={styles.startButtonText}>{getTranslation(language, 'trace_start_btn')}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
-      {/* Tracing Screen */}
       {!showInstructions && !showResults && (
-        <View style={styles.tracingContainer}>
-          <View style={styles.topSection}>
-            <Text style={styles.tracePrompt}>
-                {activeStrokeIndex === 0 ? getTranslation(language, 'trace_start_green') :
-                 activeStrokeIndex === letterPath.strokes.length - 1 ? getTranslation(language, 'trace_almost_done') :
-                 `${getTranslation(language, 'trace_stroke')} ${activeStrokeIndex + 1}`}
-            </Text>
-            <View style={styles.soundButtonRow}>
-                <Text style={styles.targetLetterSmall}>{letter}</Text>
-                <AudioButton
-                  letter={letter}
-                  onPlayStart={handleAudioPlay}
-                  size={50}
-                  useLetterName={true}
-                />
-            </View>
-          </View>
-
-       
-          <View style={styles.canvasContainer}>
+        <View style={styles.canvasContainer}>
+          <View style={styles.canvasWrapper}>
             <TracingCanvas
-              idealPath={idealPath}
-              activeStrokeIndex={activeStrokeIndex}
-              letterStrokes={letterPath.strokes}
-              onTouchStart={startTracing}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onStrokeComplete={advanceStroke} // Advances the visual guide
-              showGuidelines={true}  // Show letter template
-              showHand={false}
-              showStrokeHints={false}
-              showGrid={false}
-              showActiveStrokeBackground={false}
-              showActiveStrokeGuide={false}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
+              idealPath={idealPath}
+              activeStrokeIndex={activeStrokeIndex}
+              onStrokeComplete={advanceStroke}
+              onTouchMove={handleTouchMove}
+              onTouchStart={startTracing}
+              onTouchEnd={handleTouchEnd}
+              isBareMode={true}
+              resetTrigger={resetTrigger}
             />
-          </View>
 
-          <View style={styles.bottomControls}>
-            <TouchableOpacity
-              style={[styles.primaryButton, isCompleting && styles.disabledButton]}
-              onPress={handleComplete}
-              disabled={isCompleting}
-            >
-              {isCompleting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.primaryButtonText}>{getTranslation(language, 'trace_check_btn')}</Text>
-              )}
-            </TouchableOpacity>
+            {!showResults && (
+              <>
+                {/* Top Controls: Clear and Watch */}
+                <View style={styles.canvasClearOverlay}>
+                  <TouchableOpacity style={styles.controlOrb} onPress={handleClear}>
+                    <Svg width={32} height={32} viewBox="0 0 100 100">
+                      <Path d="M25 25 L75 75 M75 25 L25 75" stroke="white" strokeWidth="12" strokeLinecap="round" />
+                    </Svg>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.canvasPlayOverlay}>
+                  <TouchableOpacity style={[styles.controlOrb, { backgroundColor: DT.accent.sky }]} onPress={handleOpenDemo}>
+                    <Svg width={32} height={32} viewBox="0 0 100 100">
+                      <Path d="M35 25 L75 50 L35 75 Z" fill="white" />
+                    </Svg>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Bottom Controls: Audio and Finish */}
+                <View style={styles.canvasAudioOverlay}>
+                  <AudioButton 
+                    letter={letter} 
+                    onPlayStart={handleAudioPlay} 
+                    size={52} 
+                    color={DT.accent.navy}
+                  />
+                </View>
+
+                <View style={styles.canvasCheckOverlay}>
+                  <TouchableOpacity 
+                    style={[styles.finishOrb, isCompleting && { opacity: 0.7 }]} 
+                    onPress={handleFinish}
+                    disabled={isCompleting}
+                  >
+                    {isCompleting ? (
+                      <ActivityIndicator color={DT.text.onDark} />
+                    ) : (
+                      <Svg width={48} height={48} viewBox="0 0 100 100">
+                        <Defs>
+                          <LinearGradient id="checkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.5" />
+                            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.1" />
+                          </LinearGradient>
+                        </Defs>
+                        <Circle cx="50" cy="50" r="48" fill={DT.accent.green} />
+                        <Circle cx="50" cy="50" r="46" fill="url(#checkGrad)" stroke="white" strokeWidth="1" strokeOpacity="0.5" />
+                        <Path
+                          d="M30 50l15 15l30-30"
+                          stroke="white"
+                          strokeWidth="8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
+                      </Svg>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       )}
 
-      {/* Results Screen */}
       {showResults && sessionAnalytics && (
-        <ScrollView style={styles.resultsContainer}>
-          <View style={styles.resultsHeader}>
-            <Text style={styles.resultsTitle}>{getTranslation(language, 'lesson_complete')}</Text>
-            <LetterDisplay letter={letter} size={100} color="#fff" />
-            <View style={styles.resultStatsRow}>
-                 <View style={styles.statBox}>
-                    <Text style={styles.statLabel}>{getTranslation(language, 'time')}</Text>
-                    <Text style={[styles.statValue, { color: '#2196F3' }]}>
-                        {(sessionAnalytics.overview.completionTime / 1000).toFixed(1)}s
+        <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.resultsContent}>
+            <Text style={styles.resultsTitle}>{getTranslation(language, 'trace_result_title')}</Text>
+            
+            <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                    <Text style={styles.statLabel}>Accuracy</Text>
+                    <Text style={[styles.statValue, { color: DT.text.success }]}>
+                        {Math.round(sessionAnalytics.overview?.score || 0)}%
                     </Text>
-                 </View>
+                </View>
+                <View style={styles.statBox}>
+                    <Text style={styles.statLabel}>Completeness</Text>
+                    <Text style={[styles.statValue, { color: DT.accent.sky }]}>
+                        {Math.round((sessionAnalytics.clinical?.dataQuality?.completenessScore || 0) * 100)}%
+                    </Text>
+                </View>
             </View>
-          </View>
 
-          <View style={styles.detailedMetrics}>
-            <Text style={styles.sectionTitle}>{getTranslation(language, 'analytics_report')}</Text>
-            <Text style={styles.reportSubtitle}>{getTranslation(language, 'data_saved')}</Text>
-            
-            {/* 1. Structural Analysis */}
-            <Text style={styles.subHeader}>{getTranslation(language, 'shape_structure')}</Text>
-            <DetailRow label="Aspect Ratio" value={sessionAnalytics.clinical.shape?.aspect_ratio?.toFixed(2) ?? '-'} />
-            <DetailRow label="Compactness" value={sessionAnalytics.clinical.shape?.compactness_score?.toFixed(2) ?? '-'} />
-            <DetailRow label="Closure Rate" value={`${((sessionAnalytics.clinical.shape?.closure_success_rate ?? 0) * 100).toFixed(0)}%`} />
-            
-            {/* 2. Kinematics & Fluency */}
-            <Text style={styles.subHeader}>{getTranslation(language, 'speed_fluency')}</Text>
-            <DetailRow label="Avg Velocity" value={`${(sessionAnalytics.clinical.kinematics.avgVelocity ?? 0).toFixed(1)} px/ms`} />
-            <DetailRow label="Peak Velocity" value={`${(sessionAnalytics.clinical.kinematics.peakVelocity ?? 0).toFixed(1)} px/ms`} />
-            <DetailRow label="Velocity CoV" value={`${(sessionAnalytics.clinical.kinematics.velocityCoV ?? 0).toFixed(2)}`} />
-            <DetailRow label="Velocity Peaks" value={`${sessionAnalytics.clinical.kinematics.velocityPeaks}`} />
-            <DetailRow label="Hesitations" value={`${sessionAnalytics.clinical.kinematics.velocityValleys}`} />
-            <DetailRow label="Smoothness" value={`${(100 - ((sessionAnalytics.clinical.dynamics.avgJerk ?? 0) * 1000)).toFixed(0)}%`} />
-            <DetailRow label="Avg Jerk" value={`${(sessionAnalytics.clinical.dynamics.avgJerk ?? 0).toFixed(4)}`} />
-            <DetailRow label="Sampling Rate" value={`${(sessionAnalytics.clinical.dataQuality.samplingRate ?? 0).toFixed(0)} Hz`} />
-
-            {/* 3. Motor Control & Dynamics */}
-            <Text style={styles.subHeader}>{getTranslation(language, 'motor_dynamics')}</Text>
-            <DetailRow label="Tremor Power" value={`${sessionAnalytics.clinical.graphomotor.tremorPower?.toFixed(2) ?? '0.00'}`} />
-            <DetailRow label="Tremor Freq" value={`${sessionAnalytics.clinical.graphomotor.tremorFrequency?.toFixed(1) ?? '0'} Hz`} />
-            <DetailRow label="Tremor Amp" value={`${sessionAnalytics.clinical.graphomotor.tremorAmplitude?.toFixed(2) ?? '0'} px`} />
-            <DetailRow label="Max Accel" value={`${(sessionAnalytics.clinical.dynamics.maxAcceleration ?? 0).toFixed(1)} px/s²`} />
-            <DetailRow label="Symmetry" value={`${(sessionAnalytics.clinical.dynamics.accelerationSymmetry ?? 0).toFixed(2)}`} />
-            <DetailRow label="Avg Pressure" value={`${(sessionAnalytics.clinical.graphomotor.avgPressure ?? 1).toFixed(2)}`} />
-            <DetailRow label="Press Variance" value={`${(sessionAnalytics.clinical.graphomotor.pressureVariance ?? 0).toFixed(4)}`} />
-            <DetailRow label="Ballistic Strokes" value={`${sessionAnalytics.clinical.dynamics.ballisticMovements}`} />
-
-            {/* 4. Temporal & Sequencing */}
-            <Text style={styles.subHeader}>{getTranslation(language, 'temporal_sequencing')}</Text>
-            <DetailRow label="Time in Motion" value={`${(sessionAnalytics.clinical.kinematics.timeInMotion / 1000).toFixed(1)}s`} />
-            <DetailRow label="Paused Time" value={`${(sessionAnalytics.clinical.kinematics.timePaused / 1000).toFixed(1)}s`} />
-            <DetailRow label="Fluency Ratio" value={`${(sessionAnalytics.clinical.kinematics.fluencyRatio * 100).toFixed(0)}%`} />
-            <DetailRow label="Strokes" value={`${sessionAnalytics.clinical.sequencing.strokeCountActual} ${sessionAnalytics.clinical.sequencing.strokeCountExpected > 0 ? '/ ' + sessionAnalytics.clinical.sequencing.strokeCountExpected : ''}`} />
-            <DetailRow label="Extra Strokes" value={`${sessionAnalytics.clinical.sequencing.extraStrokes}`} />
-            <DetailRow label="Lift Offs" value={`${sessionAnalytics.clinical.sequencing.liftOffCount}`} />
-            <DetailRow label="Pauses" value={`${sessionAnalytics.clinical.kinematics.velocityValleys}`} />
-            <DetailRow label="Reversals" value={`${sessionAnalytics.clinical.orientation.reversalDetected ? 'YES' : 'NO'}`} />
-          </View>
-
-          {/* ML Analysis Section */}
-          {sessionAnalytics.ml && (
             <View style={styles.detailedMetrics}>
-              <Text style={styles.sectionTitle}>{getTranslation(language, 'ml_analysis')}</Text>
-              <Text style={styles.reportSubtitle}>
-                {getTranslation(language, 'ai_recognition')}
-              </Text>
-              
-              <DetailRow
-                label="Recognition"
-                value={sessionAnalytics.ml.predictedChar}
-              />
-              <DetailRow
-                label="Confidence"
-                value={`${(sessionAnalytics.ml.confidence * 100).toFixed(1)}%`}
-              />
-              <DetailRow
-                label="Accuracy"
-                value={sessionAnalytics.ml.isCorrect ? '✅ Correct' : '❌ Incorrect'}
-              />
-              
-              {/* Detailed Reversal/Orientation Insight */}
-              {sessionAnalytics.ml.reversalDetected ? (
-                <View style={[styles.warningBox, { backgroundColor: '#FF4B4B22', borderColor: '#FF4B4B', borderWidth: 1 }]}>
-                  <Text style={styles.warningIcon}>🔄</Text>
-                  <View style={styles.warningContent}>
-                    <Text style={[styles.warningTitle, { color: '#FF4B4B' }]}>{getTranslation(language, 'reversal_detected')}</Text>
-                    <Text style={[styles.warningText, { color: '#fff' }]}>
-                      {sessionAnalytics.ml.reversalType === 'horizontal_flip' && "The letter was drawn backwards (Mirrored)."}
-                      {sessionAnalytics.ml.reversalType === 'vertical_flip' && "The letter was drawn upside down (Vertical Flip)."}
-                      {sessionAnalytics.ml.reversalType === 'rotation_180' && "The letter was drawn rotated 180 degrees."}
-                    </Text>
-                    <Text style={[styles.warningSubtext, { color: '#999' }]}>
-                      Our AI detected this specific orientation pattern with {(sessionAnalytics.ml.reversalConfidence * 100).toFixed(0)}% confidence.
-                    </Text>
-                  </View>
+                <Text style={styles.sectionTitle}>Training Feedback</Text>
+                <Text style={styles.reportSubtitle}>How you did on sound "{letter}"</Text>
+                
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Tracing Speed</Text>
+                    <Text style={styles.detailValue}>{( (sessionAnalytics.clinical?.kinematics?.avgVelocity || 0) * 1000 ).toFixed(1)} px/s</Text>
                 </View>
-              ) : (
-                <View style={[styles.warningBox, { backgroundColor: '#58CC0222', borderColor: '#58CC02', borderWidth: 1 }]}>
-                  <Text style={styles.warningIcon}>✅</Text>
-                  <View style={styles.warningContent}>
-                    <Text style={[styles.warningTitle, { color: '#58CC02' }]}>Correct Orientation</Text>
-                    <Text style={[styles.warningText, { color: '#fff' }]}>
-                      The letter was drawn in the correct orientation. No mirroring or inversions detected.
-                    </Text>
-                  </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Fluency (Smoothness)</Text>
+                    <Text style={styles.detailValue}>{((sessionAnalytics.clinical?.kinematics?.fluencyRatio || 0) * 100).toFixed(0)}%</Text>
                 </View>
-              )}
-              
-              {/* Top Predictions */}
-              {sessionAnalytics.ml.topPredictions && sessionAnalytics.ml.topPredictions.length > 1 && (
-                <View style={styles.topPredictionsContainer}>
-                  <Text style={styles.topPredictionsTitle}>{getTranslation(language, 'top_predictions')}</Text>
-                  {sessionAnalytics.ml.topPredictions.slice(0, 3).map((pred: any, idx: number) => (
-                    <View key={idx} style={styles.predictionRow}>
-                      <Text style={styles.predictionChar}>{idx + 1}. {pred.char}</Text>
-                      <View style={styles.confidenceBar}>
-                        <View 
-                          style={[
-                            styles.confidenceBarFill, 
-                            { width: `${(pred.score || 0) * 100}%` }
-                          ]} 
-                        />
-                      </View>
-                      <Text style={styles.predictionConfidence}>
-                        {((pred.score || 0) * 100).toFixed(1)}%
-                      </Text>
-                    </View>
-                  ))}
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Tremor (Shakiness)</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.graphomotor?.tremorAmplitude || 0).toFixed(2)}</Text>
                 </View>
-              )}
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Touch Pressure</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.graphomotor?.avgPressure || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Completion Time</Text>
+                    <Text style={styles.detailValue}>{((sessionAnalytics.overview?.completionTime || 0) / 1000).toFixed(1)} s</Text>
+                </View>
             </View>
-          )}
 
-          <View style={styles.resultsActions}>
-            <TouchableOpacity
-              style={styles.startButton}
-              onPress={handleExit}
-            >
-              <Text style={styles.startButtonText}>{getTranslation(language, 'trace_continue_btn')}</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={handleRetry}
-            >
-              <Text style={styles.secondaryButtonText}>{getTranslation(language, 'trace_practice_again')}</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.detailedMetrics}>
+                <Text style={styles.sectionTitle}>1. Kinematics (Motion)</Text>
+                <Text style={styles.reportSubtitle}>How you moved your hand</Text>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Mean Velocity</Text>
+                    <Text style={styles.detailValue}>{( (sessionAnalytics.clinical?.kinematics?.avgVelocity || 0) * 1000 ).toFixed(1)} px/s</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Peak Velocity</Text>
+                    <Text style={styles.detailValue}>{( (sessionAnalytics.clinical?.kinematics?.peakVelocity || 0) * 1000 ).toFixed(1)} px/s</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Speed Consistency (CoV)</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.kinematics?.velocityCoV || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Fluency Ratio</Text>
+                    <Text style={styles.detailValue}>{((sessionAnalytics.clinical?.kinematics?.fluencyRatio || 0) * 100).toFixed(0)}%</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Velocity Peaks</Text>
+                    <Text style={styles.detailValue}>{sessionAnalytics.clinical?.kinematics?.velocityPeaks || 0}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Velocity Valleys (Hesitations)</Text>
+                    <Text style={styles.detailValue}>{sessionAnalytics.clinical?.kinematics?.velocityValleys || 0}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Time In Motion</Text>
+                    <Text style={styles.detailValue}>{((sessionAnalytics.clinical?.kinematics?.timeInMotion || 0) / 1000).toFixed(1)} s</Text>
+                </View>
+            </View>
+
+            <View style={styles.detailedMetrics}>
+                <Text style={styles.sectionTitle}>2. Dynamics (Smoothness)</Text>
+                <Text style={styles.reportSubtitle}>The flow of your strokes</Text>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Avg Jerk (Coordination)</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.dynamics?.avgJerk || 0).toFixed(3)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Normalized Jerk</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.dynamics?.normalizedJerk || 0).toFixed(3)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Max Acceleration</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.dynamics?.maxAcceleration || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Accel Symmetry</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.dynamics?.accelerationSymmetry || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Ballistic (Smooth) Movements</Text>
+                    <Text style={styles.detailValue}>{sessionAnalytics.clinical?.dynamics?.ballisticMovements || 0}</Text>
+                </View>
+            </View>
+
+            <View style={styles.detailedMetrics}>
+                <Text style={styles.sectionTitle}>3. Graphomotor (Mechanics)</Text>
+                <Text style={styles.reportSubtitle}>Physical writing properties</Text>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Tremor Amplitude</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.graphomotor?.tremorAmplitude || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Tremor Frequency</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.graphomotor?.tremorFrequency || 0).toFixed(2)} Hz</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Tremor Power</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.graphomotor?.tremorPower || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Avg Target Pressure</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.graphomotor?.avgPressure || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Pressure Variance</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.graphomotor?.pressureVariance || 0).toFixed(3)}</Text>
+                </View>
+            </View>
+
+            <View style={styles.detailedMetrics}>
+                <Text style={styles.sectionTitle}>4. Shape & Spatial Analysis</Text>
+                <Text style={styles.reportSubtitle}>Geometric correctness</Text>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Mean Path Deviation</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.shape?.mean_path_deviation || 0).toFixed(1)} px</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Off-Track Errors</Text>
+                    <Text style={styles.detailValue}>{sessionAnalytics.clinical?.shape?.offTrackEvents || 0}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Aspect Ratio</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.shape?.aspect_ratio || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Compactness Score</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.shape?.compactness_score || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Shape Closure Success</Text>
+                    <Text style={styles.detailValue}>{((sessionAnalytics.clinical?.shape?.closure_success_rate || 0)*100).toFixed(0)}%</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Spatial Drift</Text>
+                    <Text style={styles.detailValue}>{(sessionAnalytics.clinical?.shape?.spatialDrift || 0).toFixed(1)} px</Text>
+                </View>
+            </View>
+
+            <View style={styles.detailedMetrics}>
+                <Text style={styles.sectionTitle}>5. Sequencing & Timing</Text>
+                <Text style={styles.reportSubtitle}>Stroke order and delays</Text>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Stroke Count</Text>
+                    <Text style={styles.detailValue}>{sessionAnalytics.clinical?.sequencing?.strokeCountActual || 0} (Expected: {sessionAnalytics.clinical?.sequencing?.strokeCountExpected || 0})</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Extra Strokes</Text>
+                    <Text style={styles.detailValue}>{sessionAnalytics.clinical?.sequencing?.extraStrokes || 0}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Lift-Off Count</Text>
+                    <Text style={styles.detailValue}>{sessionAnalytics.clinical?.sequencing?.liftOffCount || 0}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Inter-Stroke Latency</Text>
+                    <Text style={styles.detailValue}>{sessionAnalytics.clinical?.sequencing?.avgInterStrokeLatency?.toFixed(0) || 0} ms</Text>
+                </View>
+            </View>
+
+            <View style={styles.detailedMetrics}>
+                <Text style={styles.sectionTitle}>6. Orientation</Text>
+                <Text style={styles.reportSubtitle}>Directionality and Mirroring</Text>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Reversal Detected</Text>
+                    <Text style={[styles.detailValue, sessionAnalytics.clinical?.orientation?.reversalDetected && { color: DT.accent.rose }]}>
+                        {sessionAnalytics.clinical?.orientation?.reversalDetected ? 'Yes' : 'No'}
+                    </Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Mirror Confusion Score</Text>
+                    <Text style={styles.detailValue}>{((sessionAnalytics.clinical?.orientation?.mirrorConfusionScore || 0)*100).toFixed(0)}%</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Micropause Count</Text>
+                    <Text style={styles.detailValue}>{sessionAnalytics.clinical?.orientation?.micropauseCount || 0}</Text>
+                </View>
+            </View>
+
+            <View style={styles.detailedMetrics}>
+                <Text style={styles.sectionTitle}>7. Artificial Intelligence (ML)</Text>
+                <Text style={styles.reportSubtitle}>Neural Network Probability Map</Text>
+                
+                {sessionAnalytics.ml?.topPredictions?.map((prediction: any, index: number) => (
+                    <View key={`pred-${index}`} style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>
+                            {index === 0 ? 'Top Match (1st)' : index === 1 ? 'Close Match (2nd)' : '3rd Guess'} - "{prediction.char}"
+                        </Text>
+                        <Text style={[styles.detailValue, index === 0 && { color: DT.accent.sky }]}>
+                            {(prediction.score * 100).toFixed(1)}% Match
+                        </Text>
+                    </View>
+                ))}
+            </View>
+
+            <View style={styles.resultsActions}>
+                <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+                    <Text style={styles.retryButtonText}>{getTranslation(language, 'trace_retry_button')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.exitButtonResults} onPress={onExit}>
+                    <Text style={styles.exitButtonTextResults}>Done</Text>
+                </TouchableOpacity>
+            </View>
         </ScrollView>
       )}
-      
-      {/* Intro Tour (Let's Learn) */}
-      <FeatureTour 
-        visible={introTourVisible}
-        steps={[
-            {
-                title: `${getTranslation(language, 'tour_learning_letter_title')} ${letter} 🅰️`,
-                description: `${getTranslation(language, 'tour_learning_letter_desc')} ${letter}.`,
-                style: { top: '12%', alignSelf: 'center' }, // Moved very high to avoid letter
-                arrowPosition: 'bottom', // Point down to the letter
-                arrowOffset: 92,
-            },
-            {
-                title: getTranslation(language, 'tour_hear_sound_title'),
-                description: getTranslation(language, 'tour_hear_sound_desc_short'),
-                style: { top: '57%', left: '57%' }, // To the right of the center speaker
-                arrowPosition: 'left',
-                arrowOffset: 25, 
-            },
-            {
-                title: getTranslation(language, 'tour_watch_demo_title'),
-                description: getTranslation(language, 'tour_watch_demo_desc'),
-                style: { top: 70, right: 10 }, 
-                arrowPosition: 'top', // Point UP to the eye button
-                arrowOffset: 110, // Pushed further right to align with corner icon
-            },
-            {
-                title: getTranslation(language, 'tour_start_writing_title'),
-                description: getTranslation(language, 'tour_start_writing_desc'),
-                style: { bottom: 150, alignSelf: 'center' }, // Kept top as it's safe
-                arrowPosition: 'bottom',
-                arrowOffset: 92,
-            }
-        ]}
-        onComplete={() => setIntroTourVisible(false)} 
-        onSkip={() => setIntroTourVisible(false)}
-      />
 
-      {/* Tracing Phase Tour */}
-      <FeatureTour 
-        visible={tracingTourVisible}
-        steps={[
-            {
-                title: getTranslation(language, 'tour_hear_sound_title'),
-                description: getTranslation(language, 'tour_hear_sound_desc_long'),
-                style: { top: 140, right: 20 },
-                arrowPosition: 'top',
-                arrowOffset: 160, // Align with top-right eye icon
-            },
-            {
-                title: getTranslation(language, 'tour_watch_tutorial_title'),
-                description: getTranslation(language, 'tour_watch_tutorial_desc'),
-                style: { top: 75, left: 45 },
-                arrowPosition: 'top', 
-                arrowOffset: 20, // Align with top-left speaker (if present there, checking header layout)
-            },
-            {
-                title: getTranslation(language, 'tour_trace_here_title'),
-                description: getTranslation(language, 'tour_trace_here_desc'),
-                style: { top: '30%', alignSelf: 'center' },
-                arrowPosition: 'bottom',
-                arrowOffset: 92,
-            },
-            {
-                title: getTranslation(language, 'tour_check_work_title'), 
-                description: getTranslation(language, 'tour_check_work_desc'),
-                style: { bottom: 100, alignSelf: 'center' },
-                arrowPosition: 'bottom',
-                arrowOffset: 92,
-            }
-        ]}
-        onComplete={() => setTracingTourVisible(false)} 
-        onSkip={() => setTracingTourVisible(false)}
-      />
-      
-      <Modal
-        visible={isDemoVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsDemoVisible(false)}
-      >
+      </SafeAreaView>
+
+      <Modal visible={isDemoVisible} transparent animationType="fade">
           <View style={styles.demoModalOverlay}>
               <View style={styles.demoModalContent}>
-                  <TouchableOpacity 
-                    style={styles.closeDemoButton}
-                    onPress={() => setIsDemoVisible(false)}
-                  >
+                  <TouchableOpacity style={styles.closeDemoButton} onPress={() => setIsDemoVisible(false)}>
                       <Text style={styles.closeDemoText}>✕</Text>
                   </TouchableOpacity>
-                  
-                  <Text style={styles.demoTitle}>{getTranslation(language, 'watch_how_to_write')} '{letter}'</Text>
-                  
+                  <Text style={styles.demoTitle}>Watch Carefully!</Text>
                   <View style={styles.demoCanvasContainer}>
                       <TracingCanvas
+                        width={CANVAS_WIDTH * 0.65}
+                        height={CANVAS_HEIGHT * 0.65}
                         idealPath={idealPath}
-                        activeStrokeIndex={0} // Doesn't matter for autoplay
-                        letterStrokes={letterPath.strokes}
-                        showGuidelines={true}
-                        showHand={true}
-                        showStrokeHints={true}
+                        activeStrokeIndex={-1}
+                        onStrokeComplete={() => {}}
                         autoPlay={true}
-                        width={CANVAS_WIDTH * 0.8}
-                        height={CANVAS_HEIGHT * 0.8}
                       />
                   </View>
               </View>
           </View>
       </Modal>
-    </SafeAreaView>
+
+      <FeatureTour 
+        visible={introTourVisible}
+        steps={[
+            {
+                title: "Welcome to Letter Mastery! 🏫",
+                description: "Let's learn how to write the letter " + letter,
+                position: 'center',
+            }
+        ]}
+        onComplete={() => setIntroTourVisible(false)}
+        onSkip={() => setIntroTourVisible(false)}
+      />
+    </View>
   );
 };
-
-// Supporting components
-const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <View style={styles.detailRow}>
-    <Text style={styles.detailLabel}>{label}</Text>
-    <Text style={styles.detailValue}>{value}</Text>
-  </View>
-);
-
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#131F24', // Duolingo Dark Background
+    backgroundColor: DT.bg.skyBlue,
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#131F24',
+    height: 60,
+    zIndex: 100,
   },
   exitButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(44, 36, 23, 0.1)',
+    borderRadius: 20,
   },
   exitButtonText: {
-    fontSize: 24,
-    color: '#52656d',
-    fontWeight: 'bold',
-  },
-  progressBarContainer: {
-    flex: 1,
-    height: 16,
-    backgroundColor: '#37464F',
-    borderRadius: 8,
-    marginHorizontal: 16,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#58CC02',
-    borderRadius: 8,
-  },
-  placeholder: {
-    width: 40,
-  },
-  // Instructions
-  instructionsContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  instructionTitle: {
-    fontSize: 24,
-    color: '#777',
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textTransform: 'uppercase',
-  },
-  mainLetterTitle: {
-      fontSize: 120,
-      fontWeight: 'bold',
-      color: '#fff',
-      marginBottom: 32,
-  },
-  audioSection: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  instructionText: {
-    fontSize: 18,
-    color: '#52656d',
-    fontWeight: 'bold',
-    marginTop: 16,
-    textTransform: 'uppercase',
-  },
-  // Tracing
-  tracingContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  topSection: {
-    width: '100%',
-    paddingHorizontal: 24,
-    marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tracePrompt: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: '#fff',
-  },
-  // New Instruction Styles
-  instructionList: {
-      width: '100%',
-      paddingHorizontal: 32,
-      marginVertical: 20,
-      gap: 12,
-  },
-  instructionItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-  },
-  instructionIcon: {
-      fontSize: 24,
-  },
-  soundButtonRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-  },
-  canvasContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bottomControls: {
-    width: '100%',
-    padding: 24,
-    paddingBottom: 32,
-  },
-  // Buttons
-  startButton: {
-    backgroundColor: '#58CC02', // Duolingo Green
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#58CC02',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 0,
-    borderBottomWidth: 4,
-    borderBottomColor: '#46A302', // Darker green for 3D effect
-  },
-  startButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  primaryButton: {
-    backgroundColor: '#58CC02',
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    borderBottomWidth: 4,
-    borderBottomColor: '#46A302',
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  secondaryButton: {
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#37464F',
-    marginTop: 16,
-  },
-  secondaryButtonText: {
-    color: '#2196F3', // Duolingo Blue
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  disabledButton: {
-    backgroundColor: '#37464F',
-    borderBottomColor: '#252F35',
-  },
-  // Results
-  resultsContainer: {
-    flex: 1,
-    padding: 24,
-  },
-  resultsHeader: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  resultsTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFC800', // Gold
-    marginBottom: 24,
-  },
-  resultStatsRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 24,
-  },
-  statBox: {
-      backgroundColor: '#131F24',
-      borderWidth: 2,
-      borderColor: '#37464F',
-      borderRadius: 16,
-      padding: 16,
-      minWidth: 120,
-      alignItems: 'center',
-  },
-  statLabel: {
-      color: '#52656d',
-      fontWeight: 'bold',
-      fontSize: 12,
-      marginBottom: 8,
-  },
-  targetLetterSmall: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginRight: 16,
-  },
-  subHeader: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#90A4AE', // Blue Grey
-    marginTop: 16,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  statValue: {
-      fontSize: 24,
-      fontWeight: 'bold',
-  },
-  detailedMetrics: {
-    backgroundColor: '#131F24',
-    borderWidth: 2,
-    borderColor: '#37464F',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 32,
-  },
-  sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  reportSubtitle: {
-      color: '#52656d',
-      marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#37464F',
-  },
-  detailLabel: {
-    fontSize: 16,
-    color: '#999',
-    fontWeight: 'bold',
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  resultsActions: {
-      marginBottom: 32,
-  },
-  // ML Analysis Styles
-  warningBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FFA500',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 16,
-    alignItems: 'flex-start',
-  },
-  warningIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  warningContent: {
-    flex: 1,
-  },
-  warningTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 4,
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#000',
-  },
-  warningSubtext: {
-    fontSize: 12,
-    color: '#333',
-    marginTop: 4,
-  },
-  topPredictionsContainer: {
-    marginTop: 16,
-  },
-  topPredictionsTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#999',
-    marginBottom: 8,
-  },
-  predictionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  predictionChar: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    width: 60,
-  },
-  confidenceBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#37464F',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginHorizontal: 8,
-  },
-  confidenceBarFill: {
-    height: '100%',
-    backgroundColor: '#58CC02',
-  },
-  predictionConfidence: {
-    fontSize: 14,
-    color: '#999',
-    width: 50,
-    textAlign: 'right',
-  },
-  demoModalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.9)',
-      justifyContent: 'center',
-      alignItems: 'center',
-  },
-  demoModalContent: {
-      width: '90%',
-      height: '80%',
-      backgroundColor: '#131F24',
-      borderRadius: 24,
-      padding: 20,
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: '#37464F',
-  },
-  demoTitle: {
-      fontSize: 24,
-      color: '#fff',
-      fontWeight: 'bold',
-      marginBottom: 20,
-  },
-  closeDemoButton: {
-      position: 'absolute',
-      top: 16,
-      right: 16,
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 100,
-      backgroundColor: '#37464F',
-      borderRadius: 20,
-  },
-  closeDemoText: {
-      fontSize: 24,
-      color: '#fff',
-      fontWeight: 'bold',
-  },
-  demoCanvasContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+    color: DT.text.primary,
+    fontWeight: '800',
   },
   headerWatchButton: {
       width: 40,
       height: 40,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: '#37464F',
+      backgroundColor: DT.bg.lavender,
       borderRadius: 20,
       marginLeft: 'auto',
       marginRight: 16,
+      ...DT.shadow.soft,
+      borderWidth: 1,
+      borderColor: DT.surface.cardBorder,
   },
   headerWatchText: {
       fontSize: 20,
   },
+  headerTitleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  headerLetterText: {
+    fontSize: 32,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.accent.indigo,
+    fontFamily: Platform.OS === 'ios' ? 'OpenDyslexic-Bold' : 'sans-serif-rounded',
+  },
+  placeholder: {
+    width: 40,
+  },
+  instructionsContainer: {
+    flex: 1,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instructionTitle: {
+    fontSize: 28,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    marginBottom: 40,
+    textAlign: 'center',
+  },
+  mainLetterTitle: {
+    fontSize: 180,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.accent.indigo,
+    marginBottom: 60,
+    ...DT.shadow.medium,
+    textAlign: 'center',
+  },
   instructionButtonsRow: {
-      flexDirection: 'row',
-      gap: 16,
-      width: '100%',
+    flexDirection: 'row',
+    gap: 16,
+    width: '100%',
   },
   watchButton: {
-      flex: 1,
-      backgroundColor: '#37464F',
-      paddingVertical: 16,
-      borderRadius: 16,
-      alignItems: 'center',
-      borderBottomWidth: 4,
-      borderBottomColor: '#252F35',
+    flex: 1,
+    backgroundColor: DT.bg.lavender,
+    paddingVertical: 18,
+    borderRadius: DT.radius.lg,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: DT.surface.cardBorder,
   },
   watchButtonText: {
-      color: '#fff',
-      fontSize: 18,
-      fontWeight: 'bold',
-      letterSpacing: 1,
+    color: DT.text.primary,
+    fontSize: 17,
+    fontWeight: DT.typography.weightBold,
+  },
+  startButton: {
+    flex: 1,
+    backgroundColor: DT.accent.sky,
+    paddingVertical: 18,
+    borderRadius: DT.radius.lg,
+    alignItems: 'center',
+    ...DT.shadow.medium,
+  },
+  startButtonText: {
+    color: DT.text.onDark,
+    fontSize: 17,
+    fontWeight: DT.typography.weightHeavy,
+  },
+  canvasContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 100, // Increased to avoid overlap with letter picker strip
+    width: '100%',
+  },
+  canvasWrapper: {
+    width: CANVAS_WIDTH,
+    height: CANVAS_HEIGHT,
+    borderRadius: DT.radius.lg,
+    overflow: 'hidden',
+    backgroundColor: 'white',
+    ...DT.shadow.medium,
+  },
+  canvasAudioOverlay: {
+    position: 'absolute',
+    bottom: 24, 
+    left: 24,
+    zIndex: 50,
+  },
+  canvasCheckOverlay: {
+    position: 'absolute',
+    bottom: 24, 
+    right: 24,
+    zIndex: 50,
+  },
+  canvasClearOverlay: {
+    position: 'absolute',
+    top: 24, 
+    left: 24,
+    zIndex: 50,
+  },
+  canvasPlayOverlay: {
+    position: 'absolute',
+    top: 24, 
+    right: 24,
+    zIndex: 50,
+  },
+  controlOrb: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 69, 58, 0.8)', // Clear defaults to soft red
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...DT.shadow.medium,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  finishOrb: {
+    backgroundColor: DT.accent.green,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...DT.shadow.medium,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  finishButton: {
+    marginTop: 30,
+    backgroundColor: DT.accent.green,
+    paddingVertical: 18,
+    paddingHorizontal: 60,
+    borderRadius: DT.radius.xl,
+    ...DT.shadow.medium,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  finishButtonText: {
+    color: DT.text.onDark,
+    fontSize: 22,
+    fontWeight: DT.typography.weightHeavy,
+    letterSpacing: 1.5,
+  },
+  resultsContainer: {
+    flex: 1,
+    backgroundColor: DT.bg.parchment,
+  },
+  resultsContent: {
+    padding: 24,
+    paddingBottom: 100, // Increased to avoid overlap with letter picker strip
+    alignItems: 'center',
+  },
+  resultsTitle: {
+    fontSize: 32,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    marginVertical: 32,
+    textAlign: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    width: '100%',
+    gap: 16,
+    marginBottom: 32,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.xl,
+    padding: 20,
+    alignItems: 'center',
+    ...DT.shadow.soft,
+    borderWidth: 1,
+    borderColor: DT.surface.cardBorder,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: DT.text.muted,
+    fontWeight: DT.typography.weightBold,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  statValue: {
+    fontSize: 32,
+    fontWeight: DT.typography.weightHeavy,
+    textAlign: 'center',
+  },
+  detailedMetrics: {
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.xl,
+    padding: 24,
+    width: '100%',
+    marginBottom: 32,
+    ...DT.shadow.soft,
+    borderWidth: 1,
+    borderColor: DT.surface.cardBorder,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    marginBottom: 4,
+  },
+  reportSubtitle: {
+    fontSize: 15,
+    color: DT.text.secondary,
+    marginBottom: 20,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: DT.surface.divider,
+  },
+  detailLabel: {
+    fontSize: 16,
+    color: DT.text.secondary,
+    fontWeight: DT.typography.weightMedium,
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: DT.typography.weightBold,
+    color: DT.text.primary,
+  },
+  resultsActions: {
+    width: '100%',
+    gap: 16,
+    marginBottom: 40,
+  },
+  retryButton: {
+    backgroundColor: DT.bg.lavender,
+    paddingVertical: 18,
+    borderRadius: DT.radius.lg,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: DT.accent.indigo,
+  },
+  retryButtonText: {
+    color: DT.accent.indigo,
+    fontSize: 18,
+    fontWeight: DT.typography.weightHeavy,
+  },
+  exitButtonResults: {
+    backgroundColor: DT.accent.navy,
+    paddingVertical: 18,
+    borderRadius: DT.radius.lg,
+    alignItems: 'center',
+    ...DT.shadow.medium,
+  },
+  exitButtonTextResults: {
+    color: DT.text.onDark,
+    fontSize: 18,
+    fontWeight: DT.typography.weightHeavy,
+  },
+  demoModalOverlay: {
+    flex: 1,
+    backgroundColor: DT.surface.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  demoModalContent: {
+    width: '90%',
+    height: '75%',
+    backgroundColor: DT.bg.cream,
+    borderRadius: DT.radius.xl,
+    padding: 24,
+    alignItems: 'center',
+    ...DT.shadow.medium,
+    borderWidth: 2,
+    borderColor: DT.surface.cardBorder,
+  },
+  demoTitle: {
+    fontSize: 24,
+    fontWeight: DT.typography.weightHeavy,
+    color: DT.text.primary,
+    marginBottom: 20,
+  },
+  closeDemoButton: {
+    position: 'absolute',
+    top: -15,
+    right: -15,
+    width: 44,
+    height: 44,
+    backgroundColor: DT.accent.navy,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...DT.shadow.medium,
+    zIndex: 100,
+  },
+  closeDemoText: {
+    fontSize: 24,
+    color: DT.text.onDark,
+    fontWeight: '800',
+  },
+  demoCanvasContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: DT.surface.card,
+    borderRadius: DT.radius.lg,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: DT.surface.cardBorder,
   },
 });
 

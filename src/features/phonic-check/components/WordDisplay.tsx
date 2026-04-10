@@ -3,11 +3,11 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Animated,
 } from 'react-native';
+import { AppText as Text } from '../../../components/AppText';
 import { colors, fonts } from '../theme';
 
 interface WordDisplayProps {

@@ -1,4 +1,4 @@
-import { SIGHT_WORDS_DATA, DifficultyLevel } from '../../../data/sightWords';
+import { WordService } from '../../../services/WordService';
 
 export interface GameRound {
     targetWord: string;
@@ -18,9 +18,19 @@ const shuffle = <T>(array: T[]): T[] => {
     return array.sort(() => Math.random() - 0.5);
 };
 
-export const generateRound = (levelId: DifficultyLevel, screenWidth: number, screenHeight: number): GameRound => {
-    const levelData = SIGHT_WORDS_DATA.find(l => l.id === levelId) || SIGHT_WORDS_DATA[0];
-    const allWords = levelData.words;
+export const generateRound = (levelId: string, screenWidth: number, screenHeight: number): GameRound => {
+    let allWords: string[] = [];
+    
+    if (levelId === 'Tricky') {
+        allWords = WordService.getTrickyWords(50);
+    } else {
+        allWords = WordService.getWordsByLevel(levelId as any, 50);
+    }
+
+    if (allWords.length === 0) {
+        // Fallback if corpus is somehow empty or levelId is invalid
+        allWords = ['the', 'and', 'was', 'for'];
+    }
 
     // 1. Pick Target Word
     const targetIndex = Math.floor(Math.random() * allWords.length);

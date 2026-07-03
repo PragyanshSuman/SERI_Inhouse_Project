@@ -254,6 +254,21 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        {/* DEVELOPER TOOLS */}
+        {renderSectionHeader("Developer Tools 🛠️")}
+        <View style={styles.card}>
+          <TouchableOpacity 
+            style={styles.parentalButton}
+            onPress={() => navigation.navigate('VoskTesting' as any)}
+          >
+            <View>
+              <Text style={styles.parentalButtonText}>Vosk Offline Speech Test</Text>
+              <Text style={styles.parentalButtonSub}>Test offline phoneme accuracy without server</Text>
+            </View>
+            <Text style={styles.navIcon}>▶</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={{ height: 40 }} />
       </ScrollView>
 

@@ -26,6 +26,8 @@ import EmotionTracker from '../../../components/EmotionTracker';
 import BackButton from '../../../components/BackButton';
 import InfoButton from '../../../components/InfoButton';
 import { DT } from '../../../utils/DyslexiaTheme';
+import { saveWritingAttempt, getWritingStats } from '../../../services/TracingStatsService';
+import { recordLetterTracing } from '../../learning-path/services/PathProgressBridge';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CANVAS_SIZE = SCREEN_WIDTH - 40;
@@ -41,8 +43,15 @@ const WritingAssessmentScreen = () => {
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [tourVisible, setTourVisible] = useState(false);
     
-    // Stats
+    // Stats (initialised at 0; will hydrate from storage in useEffect below)
     const [stats, setStats] = useState({ total: 0, correct: 0 });
+
+    // Hydrate persisted stats on mount so history survives navigation
+    useEffect(() => {
+        getWritingStats().then(persisted => {
+            setStats({ total: persisted.total, correct: persisted.correct });
+        }).catch(() => {});
+    }, []);
 
     useEffect(() => {
         modelService.loadModel();
@@ -97,6 +106,7 @@ const WritingAssessmentScreen = () => {
 
         const maxProbIndex = predictions.indexOf(Math.max(...predictions));
         const conf = predictions[maxProbIndex];
+        const targetConf = targetClassId !== null ? predictions[targetClassId] : 0;
         const predictedChar = getCharFromIndex(maxProbIndex);
         
         let isCorrect = (maxProbIndex === targetClassId);
@@ -108,7 +118,9 @@ const WritingAssessmentScreen = () => {
                 const predT = await modelService.predict(transformed);
                 if (predT) {
                     const maxT = predT.indexOf(Math.max(...predT));
-                    if (maxT === targetClassId) return name;
+                    const maxTConf = predT[maxT];
+                    // Only flag as a reversal if the model is reasonably confident (>40%) that the flipped version is the target letter
+                    if (maxT === targetClassId && maxTConf > 0.4) return name;
                 }
                 return null;
             };
@@ -129,7 +141,23 @@ const WritingAssessmentScreen = () => {
             total: prev.total + 1,
             correct: prev.correct + (isCorrect ? 1 : 0)
         }));
-        
+
+        // ── Persist this attempt so stats survive navigation ──────────────────
+        const attempt = {
+            letter: targetChar ?? '?',
+            isCorrect,
+            confidence: targetConf, // Track confidence of the requested letter, not the wrong prediction
+            timingSecs: parseFloat(timing.toFixed(1)),
+            feedbackDetail: feedbackDetails || undefined,
+            timestamp: new Date().toISOString(),
+        };
+        saveWritingAttempt(attempt).catch(() => {});
+
+        // ── Feed PathProgressBridge so the Learning Path stays in sync ────────
+        // Score: 100 if correct, otherwise model confidence of the TARGET letter × 100 as a partial score
+        const bridgeScore = isCorrect ? 100 : Math.round(targetConf * 100);
+        recordLetterTracing(targetChar ?? '?', bridgeScore, parseFloat(timing.toFixed(1))).catch(() => {});
+
         setResult(isCorrect ? "CORRECT!" : "INCORRECT");
         setConfidence(conf);
         

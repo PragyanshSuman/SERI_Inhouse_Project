@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { AppText as Text } from '../../../components/AppText';
 import { useNavigation } from '@react-navigation/native';
-import { SIGHT_WORDS_DATA } from '../../../data/sightWords';
+import { WordService } from '../../../services/WordService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettings } from '../../../context/SettingsContext';
 import { getTranslation } from '../../../utils/Translations';
@@ -36,15 +36,22 @@ const SightWordsDashboard = () => {
         }
     ];
 
-    const getLevelLabel = (id: string, defaultLabel: string) => {
+    const getLevelLabel = (id: string) => {
         switch(id) {
-            case 'prek': return getTranslation(settings.language, 'dashboard_ninja_level_prek');
-            case 'kindergarten': return getTranslation(settings.language, 'dashboard_ninja_level_k');
-            case 'first_grade': return getTranslation(settings.language, 'dashboard_ninja_level_1st');
-            case 'second_grade': return getTranslation(settings.language, 'dashboard_ninja_level_2nd');
-            default: return defaultLabel;
+            case 'Easy': return getTranslation(settings.language, 'dashboard_ninja_level_prek');
+            case 'Medium': return getTranslation(settings.language, 'dashboard_ninja_level_k');
+            case 'Hard': return getTranslation(settings.language, 'dashboard_ninja_level_1st');
+            case 'Tricky': return "Tricky Words (Ninja Elite)";
+            default: return id;
         }
     };
+
+    const levels = [
+        { id: 'Easy', color: '#4ade80' },
+        { id: 'Medium', color: '#fbbf24' },
+        { id: 'Hard', color: '#f87171' },
+        { id: 'Tricky', color: '#a78bfa' }
+    ];
 
     return (
         <View style={styles.container}>
@@ -60,29 +67,35 @@ const SightWordsDashboard = () => {
                 <ScrollView contentContainerStyle={styles.scroll}>
                     <Text style={styles.subtitle}>{getTranslation(settings.language, 'dashboard_ninja_subtitle')}</Text>
                     
-                    {SIGHT_WORDS_DATA.map((level) => (
-                        <TouchableOpacity
-                            key={level.id}
-                            style={[styles.card]}
-                            onPress={() => navigation.navigate('WordNinjaGame', { levelId: level.id })}
-                            activeOpacity={0.8}
-                        >
-                            <LinearGradient
-                                colors={DT.gradient.warmCard}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={styles.cardGradient}
+                    {levels.map((level) => {
+                        const wordCount = level.id === 'Tricky' 
+                            ? WordService.getTrickyWords(999).length 
+                            : WordService.getWordsByLevel(level.id as any, 999).length;
+
+                        return (
+                            <TouchableOpacity
+                                key={level.id}
+                                style={[styles.card]}
+                                onPress={() => navigation.navigate('WordNinjaGame', { levelId: level.id })}
+                                activeOpacity={0.8}
                             >
-                                <View style={styles.cardContent}>
-                                    <View>
-                                        <Text style={styles.cardTitle}>{getLevelLabel(level.id, level.label)}</Text>
-                                        <Text style={styles.cardSub}>{level.words.length} {getTranslation(settings.language, 'dashboard_ninja_words_suffix')}</Text>
+                                <LinearGradient
+                                    colors={DT.gradient.warmCard}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.cardGradient}
+                                >
+                                    <View style={styles.cardContent}>
+                                        <View>
+                                            <Text style={styles.cardTitle}>{getLevelLabel(level.id)}</Text>
+                                            <Text style={styles.cardSub}>{wordCount} {getTranslation(settings.language, 'dashboard_ninja_words_suffix')}</Text>
+                                        </View>
+                                        <Text style={styles.playIcon}>▶</Text>
                                     </View>
-                                    <Text style={styles.playIcon}>▶</Text>
-                                </View>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    ))}
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </ScrollView>
             </View>
             <FeatureTour 

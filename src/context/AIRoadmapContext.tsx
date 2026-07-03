@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, ReactNode, useEffect } from 'react';
 import { EmotionDataPoint } from './EmotionContext';
 import { useSettings } from './SettingsContext';
+import { WordService } from '../services/WordService';
 
 // ─── Module suggestions for US-17 ────────────────────────────────────────────
 export type ModuleSuggestion = {
@@ -62,6 +63,9 @@ type AIRoadmapContextType = {
   checkScreenTime: () => void;
   elapsedMinutes: () => number;
   nextThresholdMinutes: number;
+
+  // Lexical Progression (New)
+  getRecommendedWords: (accuracy: number) => string[];
 };
 
 const AIRoadmapContext = createContext<AIRoadmapContextType | undefined>(undefined);
@@ -142,6 +146,24 @@ export const AIRoadmapProvider: React.FC<{ children: ReactNode }> = ({ children 
     setShowWellnessModal(false);
   }, []);
 
+  // ── Lexical Progression: Dynamic Difficulty Logic ─────────────────────────
+  const getRecommendedWords = useCallback((accuracy: number): string[] => {
+    // If accuracy is high (>85%), push for harder words (+1.0 DDS)
+    // If accuracy is low (<60%), stay in easier range (-0.5 DDS)
+    let minDds = 1.0;
+    let maxDds = 3.0;
+
+    if (accuracy > 85) {
+      minDds = 4.0;
+      maxDds = 7.0;
+    } else if (accuracy > 70) {
+      minDds = 3.0;
+      maxDds = 5.0;
+    }
+
+    return WordService.getWordsInRange(minDds, maxDds, 5);
+  }, []);
+
   return (
     <AIRoadmapContext.Provider
       value={{
@@ -153,6 +175,7 @@ export const AIRoadmapProvider: React.FC<{ children: ReactNode }> = ({ children 
         checkScreenTime,
         elapsedMinutes,
         nextThresholdMinutes,
+        getRecommendedWords,
       }}
     >
       {children}

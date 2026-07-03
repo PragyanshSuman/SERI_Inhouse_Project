@@ -58,7 +58,7 @@ class ModelService {
 
             // CRITICAL: Model expects [1, 28, 28, 1] shape
             // But react-native-fast-tflite accepts flat arrays
-            const output = await this.model.run([inputTensor]);
+            const output = this.model.runSync([inputTensor]);
 
             if (output && output.length > 0) {
                 // console.log(`Inference successful. Output length: ${output[0].length}`);

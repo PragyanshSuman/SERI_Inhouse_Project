@@ -67,6 +67,8 @@ class AudioSessionManager {
       this.currentSession = null;
       this.notifyListeners();
       console.log(`[AudioSessionManager] Lock released for ${id}`);
+      // Reset audio mode back to playback so TTS and sounds work again
+      this.configurePlaybackSession();
     }
   }
 
@@ -93,7 +95,8 @@ class AudioSessionManager {
   }
 
   /**
-   * Helper to ensure Audio category is set correctly for recording vs playback
+   * Sets audio mode for recording (microphone input).
+   * Call configurePlaybackSession() when done to restore sound output.
    */
   public async configureRecordingSession() {
     try {
@@ -105,7 +108,26 @@ class AudioSessionManager {
         playThroughEarpieceAndroid: false,
       });
     } catch (error) {
-      console.error('[AudioSessionManager] Failed to configure audio mode:', error);
+      console.error('[AudioSessionManager] Failed to configure recording mode:', error);
+    }
+  }
+
+  /**
+   * Resets audio mode back to playback (speaker output).
+   * Must be called after any recording session ends so TTS/sounds work again.
+   */
+  public async configurePlaybackSession() {
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: false,
+        playThroughEarpieceAndroid: false,
+      });
+      console.log('[AudioSessionManager] Audio mode restored to playback.');
+    } catch (error) {
+      console.error('[AudioSessionManager] Failed to configure playback mode:', error);
     }
   }
 }

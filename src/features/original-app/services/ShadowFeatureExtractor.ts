@@ -255,7 +255,22 @@ export class ShadowFeatureExtractor {
             console.error('[ShadowFeatureExtractor] ML analysis failed:', error);
         }
 
-        // ── 9. Construct Full Clinical Summary ────────────────────────────────
+        // ── 9. Compute Path Completeness (Coverage) ───────────────────────────
+        let completenessScore = 1.0;
+        if (this.idealPath && this.idealPath.points.length > 0 && this.rawPoints.length > 0) {
+            let covered = 0;
+            const COVERAGE_TOLERANCE = 40; // pixels
+            for (const ip of this.idealPath.points) {
+                // If any raw point is within COVERAGE_TOLERANCE, it's covered
+                const isCovered = this.rawPoints.some(rp => dist(rp.x, rp.y, ip.x, ip.y) < COVERAGE_TOLERANCE);
+                if (isCovered) covered++;
+            }
+            completenessScore = covered / this.idealPath.points.length;
+        } else if (this.rawPoints.length === 0) {
+            completenessScore = 0.0;
+        }
+
+        // ── 10. Construct Full Clinical Summary ───────────────────────────────
         const summary: SessionFeatureSummary = {
             sessionId,
             letter,
@@ -271,7 +286,7 @@ export class ShadowFeatureExtractor {
             clinical: {
                 dataQuality: {
                     samplingRate: this.estimateSamplingRate(),
-                    completenessScore: 1.0,
+                    completenessScore,
                     totalSamples: this.rawPoints.length,
                     pointsDropped: 0,
                 },
@@ -619,6 +634,13 @@ export class ShadowFeatureExtractor {
             return { reversalDetected: false };
         }
 
+        const originalConf = originalPredictions[expectedIdx] ?? 0;
+
+        // If the original drawing is already highly confident, it's not a reversal.
+        if (originalConf > 0.7) {
+            return { reversalDetected: false };
+        }
+
         const transforms: Array<{ mode: 'h'|'v'|'r'; type: MLFeatures['reversalType'] }> = [
             { mode: 'h', type: 'horizontal_flip' },
             { mode: 'v', type: 'vertical_flip' },
@@ -631,9 +653,8 @@ export class ShadowFeatureExtractor {
                 const preds   = await modelService.predict(flipped);
                 if (preds) {
                     const flippedConfForExpected = preds[expectedIdx] ?? 0;
-                    // If the *flipped* image is recognized as the expected char
-                    // → the child drew the letter mirrored/rotated
-                    if (flippedConfForExpected > REVERSAL_CONFIDENCE_THRESHOLD) {
+                    // Only flag as reversal if the flipped version is significantly more confident than the original
+                    if (flippedConfForExpected > REVERSAL_CONFIDENCE_THRESHOLD && flippedConfForExpected > originalConf + 0.15) {
                         return {
                             reversalDetected: true,
                             reversalType: type,

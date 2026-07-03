@@ -3,6 +3,8 @@ import { LetterPath, Point } from '../models/TracingData';
 import { ShadowFeatureExtractor } from '../services/ShadowFeatureExtractor';
 import StorageService from '../services/StorageService';
 import { generateIdealPath } from '../utils/GeometryUtils';
+import { saveTracingSessionReport } from '../../../services/TracingStatsService';
+import { recordLetterTracing } from '../../learning-path/services/PathProgressBridge';
 
 interface UseTracingSessionProps {
     letterPath: LetterPath;
@@ -124,12 +126,36 @@ export const useTracingSession = ({
             }
         );
 
-        try {
-            if (completionStatus === 'completed') {
+        if (completionStatus === 'completed') {
+            try {
                 await StorageService.saveAnalytics(report);
+            } catch (error) {
+                console.error('Failed to save analytics to StorageService:', error);
             }
-        } catch (error) {
-            console.error('Failed to save analytics:', error);
+
+            // Also persist to TracingStatsService so SessionSummary can read by sessionId
+            const accuracy = Math.round(report.spatial_accuracy_deviation?.accuracy_score ?? report.overview?.score ?? 0);
+            const durationSecs = Math.round(
+                (report.time_based_performance?.total_session_duration ?? (report.overview?.completionTime ? report.overview.completionTime / 1000 : 30))
+            );
+            const actualStrokes = report.stroke_count_sequencing?.actual_stroke_count_used ?? 0;
+
+            await saveTracingSessionReport({
+                sessionId: report.sessionId,
+                letter: letterPath.letter,
+                timestamp: report.timestamp ?? new Date().toISOString(),
+                accuracy,
+                durationSecs,
+                segmentCount: actualStrokes,
+                segmentAccuracies: [],   // rich report uses kinematics, not per-segment %
+                // Attach full report for buildFromRichAnalytics
+                overview: report.overview,
+                clinical: report.clinical,
+                ml: report.ml,
+            }).catch(err => console.warn('[useTracingSession] saveTracingSessionReport failed:', err));
+
+            // Feed learning path bridge
+            await recordLetterTracing(letterPath.letter, accuracy, durationSecs).catch(() => {});
         }
 
         return report;

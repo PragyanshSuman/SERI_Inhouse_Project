@@ -44,3 +44,26 @@ export const checkPronunciation = async (word: string, audioUri: string) => {
         throw error;
     }
 };
+
+export const exportPdfReport = async (reportText: string): Promise<string> => {
+    try {
+        const response = await fetch(`${API_URL}/export-pdf`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ report_text: reportText }),
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to generate PDF');
+        }
+        
+        const data = await response.json();
+        return `${API_URL}${data.url}`;
+    } catch (error) {
+        console.error('PDF Export Error:', error);
+        throw error;
+    }
+};

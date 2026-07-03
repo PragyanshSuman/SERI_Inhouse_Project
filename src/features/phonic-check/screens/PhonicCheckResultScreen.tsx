@@ -108,7 +108,7 @@ const PhonicCheckResultScreen = () => {
             <View style={styles.phonemeContainer}>
             {result.phonemes.map((p: any, index: number) => (
                 <View key={index} style={[styles.phonemeBox, { borderColor: getScoreColor(p.score) }]}>
-                <Text style={[styles.phonemeText, { color: getScoreColor(p.score) }]}>{p.p}</Text>
+                <Text style={[styles.phonemeText, { color: getScoreColor(p.score) }]}>/{p.p}/</Text>
                 <Text style={styles.phonemeScore}>{Math.round(p.score)}%</Text>
                 </View>
             ))}

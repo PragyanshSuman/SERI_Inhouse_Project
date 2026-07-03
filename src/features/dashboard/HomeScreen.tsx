@@ -114,74 +114,92 @@ export default function HomeScreen() {
           <View style={styles.menuGrid}>
             <MenuCard
               title={getTranslation(language, 'module_letter_tracing')}
-              subtitle="Master the alphabet"
+              subtitle="Trace every letter"
               icon="🔤"
               color={DT.accent.indigo}
               onPress={() => navigation.navigate('LetterTracing')} 
             />
             <MenuCard
               title={getTranslation(language, 'module_phonic_check')}
-              subtitle="Practice speaking"
+              subtitle="Score your speech"
               icon="🎤"
               color={DT.accent.teal}
               onPress={() => navigation.navigate('ModeSelection', { toolType: 'pronunciation' })}
             />
             <MenuCard
               title={getTranslation(language, 'module_phonics_phonemes')}
-              subtitle="Magic Word Studio"
+              subtitle="Speak & listen"
               icon="✨"
               color={DT.accent.amber}
               onPress={() => navigation.navigate('ModeSelection', { toolType: 'magic_words' })}
             />
              <MenuCard
               title={getTranslation(language, 'module_original_app')}
-              subtitle="Writing Assessment"
+              subtitle="Write & get scored"
               icon="🏆"
               color={DT.accent.navy}
               onPress={() => navigation.navigate('OriginalApp')}
             />
           </View>
 
-          {renderSectionHeader("Fun & Games")}
+          {renderSectionHeader("Games & Play")}
           <View style={styles.menuGrid}>
              <MenuCard
               title={getTranslation(language, 'module_word_ninja')}
-              subtitle="Fast-paced slicing"
+              subtitle="Swipe the right word"
               icon="🥷"
               color={DT.accent.rose}
               onPress={() => navigation.navigate('SightWordsDashboard')}
             />
              <MenuCard
               title={getTranslation(language, 'module_rhyme_time')}
-              subtitle="Find matching words"
+              subtitle="Match the sounds"
               icon="🎵"
               color={DT.accent.violet}
               onPress={() => navigation.navigate('RhymeDashboard')}
             />
             <MenuCard
               title={getTranslation(language, 'module_visual_discrimination')}
-              subtitle="Train your brain"
+              subtitle="Spot the difference"
               icon="🧠"
               color={DT.accent.sky}
               onPress={() => navigation.navigate('VisualDiscriminationDashboard')}
             />
           </View>
 
-          {renderSectionHeader("Performance")}
+          {renderSectionHeader("My Progress")}
           <View style={styles.menuGrid}>
             <MenuCard
-              title="Activity Charts"
-              subtitle="Your emotions"
+              title="Mood Track"
+              subtitle="Emotion timeline"
               icon="📈"
               color={DT.accent.sky}
               onPress={() => navigation.navigate('EmotionReport' as any)}
             />
             <MenuCard
-              title="Learning Journey"
-              subtitle="Detailed Report"
+              title="My Report"
+              subtitle="Full session log"
               icon="📄"
               color={DT.accent.teal}
               onPress={() => navigation.navigate('LearningJourneyReport' as any)}
+            />
+          </View>
+
+          {renderSectionHeader("Clinical Tools")}
+          <View style={styles.menuGrid}>
+            <MenuCard
+              title="Speech Test"
+              subtitle="Full clinical assessment"
+              icon="🩺"
+              color="#1E3A5F"
+              onPress={() => navigation.navigate('ClinicalAssessment' as any)}
+            />
+            <MenuCard
+              title="Write Test"
+              subtitle="Listen & write on canvas"
+              icon="✍️"
+              color="#5B21B6"
+              onPress={() => navigation.navigate('SpellingAssessment' as any)}
             />
           </View>
           

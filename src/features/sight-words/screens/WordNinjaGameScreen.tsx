@@ -6,7 +6,7 @@ import * as Speech from 'expo-speech';
 import { audioEngine } from '../../phonics-phonemes/services/audio/AudioEngine';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useLanguage, useSettings } from '../../../context/SettingsContext';
-import { DifficultyLevel } from '../../../data/sightWords';
+// DifficultyLevel removed, now using string from WordService
 import { generateRound, FlyingWord } from '../utils/WordGenerator';
 import { LinearGradient } from 'expo-linear-gradient';
 import FeatureTour, { TourStep } from '../../../components/FeatureTour';
@@ -45,7 +45,7 @@ interface Particle {
 const WordNinjaGameScreen = () => {
     const navigation = useNavigation<any>();
     const route = useRoute();
-    const { levelId } = route.params as { levelId: DifficultyLevel };
+    const { levelId } = route.params as { levelId: string };
     const { settings } = useSettings();
     
     // Game State

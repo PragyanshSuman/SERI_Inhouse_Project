@@ -176,6 +176,12 @@ const PhonicCheckStudioScreen = () => {
     setIsProcessing(true);
     try {
       const result = await checkPronunciation(word, uri);
+      console.log('\n\n=== 🎤 PHONEME ANALYSIS RESULT ===');
+      console.log(`Word: ${word}`);
+      console.log(`Score: ${result.word_accuracy}%`);
+      console.log(`Target ARPAbet: ${result.debug_target_ipa}`);
+      console.log(`Heard ARPAbet:  ${result.transcription_heard}`);
+      console.log('==================================\n\n');
       navigation.navigate('PhonicCheckResult', { result, word });
     } catch (error) {
       console.error('Analysis error:', error);

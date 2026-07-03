@@ -21,6 +21,7 @@ import PhonicCheckStudioScreen from '../features/phonic-check/screens/PhonicChec
 import PhonicCheckResultScreen from '../features/phonic-check/screens/PhonicCheckResultScreen';
 import ProgressScreen from '../features/phonic-check/screens/ProgressScreen';
 import SettingsScreen from '../features/phonic-check/screens/SettingsScreen';
+import VoskTestingScreen from '../features/phonic-check/screens/VoskTestingScreen';
 
 import OriginalAppNavigator from '../features/original-app/navigation/OriginalAppNavigator';
 import VisualDiscriminationDashboard from '../features/visual-discrimination/screens/VisualDiscriminationDashboard';
@@ -39,6 +40,8 @@ import PathNodeScreen from '../features/learning-path/screens/PathNodeScreen';
 import { DifficultyLevel } from '../data/sightWords';
 import ParentalDashboard from '../components/ParentalDashboard';
 import ModeSelectionScreen from '../features/dashboard/ModeSelectionScreen';
+import ClinicalAssessmentScreen from '../features/phonic-check/screens/ClinicalAssessmentScreen';
+import SpellingAssessmentScreen from '../features/phonic-check/screens/SpellingAssessmentScreen';
 
 
 export type RootStackParamList = {
@@ -72,12 +75,15 @@ export type RootStackParamList = {
   
   Progress: undefined; // Keep for now
   Settings: undefined;
+  VoskTesting: undefined; // Offline Speech Testing
   OriginalApp: undefined;
   VisualDiscriminationDashboard: undefined;
   OddOneOutGame: { pairId: string; dysPathRounds?: number };
   LetterSortingGame: { pairId: string; dysPathRounds?: number };
   SightWordsDashboard: undefined;
-  WordNinjaGame: { levelId: DifficultyLevel };
+  WordNinjaGame: { levelId: string };
+  ClinicalAssessment: undefined;
+  SpellingAssessment: undefined;
   RhymeDashboard: undefined;
   RhymingMatchGame: undefined;
   EmotionReport: undefined;
@@ -121,6 +127,7 @@ function AppStack() {
       
       <Stack.Screen name="Progress" component={ProgressScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="VoskTesting" component={VoskTestingScreen} />
       <Stack.Screen name="OriginalApp" component={OriginalAppNavigator} />
       
       <Stack.Screen name="VisualDiscriminationDashboard" component={VisualDiscriminationDashboard} />
@@ -145,6 +152,12 @@ function AppStack() {
 
       {/* Mode Selection */}
       <Stack.Screen name="ModeSelection" component={ModeSelectionScreen} />
+
+      {/* Clinical Assessment */}
+      <Stack.Screen name="ClinicalAssessment" component={ClinicalAssessmentScreen} />
+
+      {/* Spelling Assessment */}
+      <Stack.Screen name="SpellingAssessment" component={SpellingAssessmentScreen} />
     </Stack.Navigator>
   );
 }

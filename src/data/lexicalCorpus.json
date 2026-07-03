@@ -1,0 +1,597 @@
+[
+  {
+    "word": "i",
+    "dds": 1.0,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 1
+  },
+  {
+    "word": "a",
+    "dds": 1.0,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 1
+  },
+  {
+    "word": "it",
+    "dds": 1.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "on",
+    "dds": 1.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "at",
+    "dds": 1.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "as",
+    "dds": 1.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "he",
+    "dds": 1.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "in",
+    "dds": 1.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "to",
+    "dds": 1.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "be",
+    "dds": 1.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "not",
+    "dds": 1.4,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "and",
+    "dds": 1.4,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "for",
+    "dds": 1.4,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "have",
+    "dds": 1.6,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "that",
+    "dds": 1.6,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "with",
+    "dds": 1.6,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "you",
+    "dds": 1.9,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "my",
+    "dds": 2.0,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "or",
+    "dds": 2.0,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "we",
+    "dds": 2.0,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "an",
+    "dds": 2.0,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "by",
+    "dds": 2.0,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "her",
+    "dds": 2.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "his",
+    "dds": 2.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "she",
+    "dds": 2.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "but",
+    "dds": 2.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "say",
+    "dds": 2.2,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "from",
+    "dds": 2.4,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "this",
+    "dds": 2.4,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "will",
+    "dds": 2.4,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "they",
+    "dds": 2.4,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "up",
+    "dds": 2.8,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "so",
+    "dds": 2.8,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "if",
+    "dds": 2.8,
+    "level": "Easy",
+    "isTricky": false,
+    "length": 2
+  },
+  {
+    "word": "bat",
+    "dds": 3.0,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "get",
+    "dds": 3.0,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "all",
+    "dds": 3.0,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "cat",
+    "dds": 3.0,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "mat",
+    "dds": 3.0,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "who",
+    "dds": 3.0,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "what",
+    "dds": 3.2,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "rope",
+    "dds": 3.2,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "shop",
+    "dds": 3.2,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "cake",
+    "dds": 3.2,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "chat",
+    "dds": 3.2,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "ship",
+    "dds": 3.2,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "out",
+    "dds": 3.5,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 3
+  },
+  {
+    "word": "rain",
+    "dds": 3.7,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "boat",
+    "dds": 3.7,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 4
+  },
+  {
+    "word": "about",
+    "dds": 3.9,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 5
+  },
+  {
+    "word": "their",
+    "dds": 3.9,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 5
+  },
+  {
+    "word": "friend",
+    "dds": 4.1,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 6
+  },
+  {
+    "word": "of",
+    "dds": 4.2,
+    "level": "Medium",
+    "isTricky": true,
+    "length": 2
+  },
+  {
+    "word": "do",
+    "dds": 4.2,
+    "level": "Medium",
+    "isTricky": true,
+    "length": 2
+  },
+  {
+    "word": "because",
+    "dds": 4.3,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 7
+  },
+  {
+    "word": "the",
+    "dds": 4.4,
+    "level": "Medium",
+    "isTricky": true,
+    "length": 3
+  },
+  {
+    "word": "beautiful",
+    "dds": 4.7,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 9
+  },
+  {
+    "word": "children",
+    "dds": 4.8,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 8
+  },
+  {
+    "word": "extraordinary",
+    "dds": 4.9,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 13
+  },
+  {
+    "word": "thoroughly",
+    "dds": 4.9,
+    "level": "Medium",
+    "isTricky": false,
+    "length": 10
+  },
+  {
+    "word": "different",
+    "dds": 5.0,
+    "level": "Hard",
+    "isTricky": false,
+    "length": 9
+  },
+  {
+    "word": "between",
+    "dds": 5.1,
+    "level": "Hard",
+    "isTricky": false,
+    "length": 7
+  },
+  {
+    "word": "important",
+    "dds": 5.8,
+    "level": "Hard",
+    "isTricky": false,
+    "length": 9
+  },
+  {
+    "word": "was",
+    "dds": 6.0,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 3
+  },
+  {
+    "word": "are",
+    "dds": 6.0,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 3
+  },
+  {
+    "word": "two",
+    "dds": 6.0,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 3
+  },
+  {
+    "word": "one",
+    "dds": 6.0,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 3
+  },
+  {
+    "word": "give",
+    "dds": 6.2,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 4
+  },
+  {
+    "word": "come",
+    "dds": 6.2,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 4
+  },
+  {
+    "word": "live",
+    "dds": 6.2,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 4
+  },
+  {
+    "word": "some",
+    "dds": 6.2,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 4
+  },
+  {
+    "word": "were",
+    "dds": 6.2,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 4
+  },
+  {
+    "word": "gone",
+    "dds": 6.2,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 4
+  },
+  {
+    "word": "done",
+    "dds": 6.2,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 4
+  },
+  {
+    "word": "there",
+    "dds": 6.4,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 5
+  },
+  {
+    "word": "where",
+    "dds": 6.4,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 5
+  },
+  {
+    "word": "does",
+    "dds": 6.7,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 4
+  },
+  {
+    "word": "said",
+    "dds": 6.7,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 4
+  },
+  {
+    "word": "could",
+    "dds": 6.9,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 5
+  },
+  {
+    "word": "eight",
+    "dds": 6.9,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 5
+  },
+  {
+    "word": "would",
+    "dds": 6.9,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 5
+  },
+  {
+    "word": "should",
+    "dds": 7.1,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 6
+  },
+  {
+    "word": "though",
+    "dds": 7.1,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 6
+  },
+  {
+    "word": "thought",
+    "dds": 7.3,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 7
+  },
+  {
+    "word": "through",
+    "dds": 8.9,
+    "level": "Hard",
+    "isTricky": true,
+    "length": 7
+  }
+]

@@ -43,6 +43,7 @@ import InfoButton from '../../../components/InfoButton';
 import EmotionTracker from '../../../components/EmotionTracker';
 import { DT } from '../../../utils/DyslexiaTheme';
 import { recordLetterTracing } from '../../learning-path/services/PathProgressBridge';
+import { saveTracingSessionReport } from '../../../services/TracingStatsService';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CANVAS_W = Math.min(420, SCREEN_W);
@@ -401,6 +402,9 @@ function TraceLetter({
     return null;
   }
 
+  // Track real per-segment coverage ratios (0–1) so we can compute true accuracy
+  const segmentCoveragesRef = React.useRef<number[]>([]);
+
   const [segIndex, setSegIndex] = useState(0);
   const [states, setStates] = useState<SegmentState[]>(
     segments.map((_, i) => (i === 0 ? "active" : "locked"))
@@ -422,7 +426,10 @@ function TraceLetter({
   // Pick one variant natively on boot
   const [activeRewardTheme, setActiveRewardTheme] = useState(rewardThemes[0]);
 
-  const goNext = useCallback(() => {
+  const goNext = useCallback((segmentCoverage: number = 1) => {
+    // Accumulate this segment's real coverage (0–1)
+    segmentCoveragesRef.current = [...segmentCoveragesRef.current, segmentCoverage];
+
     setShowSparkles(true);
     setTimeout(() => setShowSparkles(false), 1000);
 
@@ -434,18 +441,40 @@ function TraceLetter({
         );
         setSegIndex(next);
       } else {
-        // Letter complete! Record progress.
+        // Letter complete! Compute REAL accuracy from segment coverage ratios.
         const secs = Math.round((Date.now() - segSessionStart.current) / 1000);
-        // Guided tracing is self-correcting — completion = ~85% accuracy baseline
-        recordLetterTracing(letter, 85, secs);
+        const coverages = segmentCoveragesRef.current;
+        const avgCoverage = coverages.length > 0
+          ? coverages.reduce((sum, c) => sum + c, 0) / coverages.length
+          : 1;
+        // Map coverage (0–1) to accuracy score (0–100), minimum 10 for attempt credit
+        const realAccuracy = Math.max(10, Math.min(100, Math.round(avgCoverage * 100)));
+
+        const sessionId = `scalable_${letter}_${Date.now()}`;
+
+        // Persist to bridge (learning path) with real accuracy
+        recordLetterTracing(letter, realAccuracy, secs);
+
+        // Persist full report for SessionSummary
+        saveTracingSessionReport({
+          sessionId,
+          letter,
+          timestamp: new Date().toISOString(),
+          accuracy: realAccuracy,
+          durationSecs: secs,
+          segmentCount: segments.length,
+          segmentAccuracies: coverages.map(c => Math.round(c * 100)),
+        }).catch(() => {});
+
         // Roll new reward natively, trigger animation
         setActiveRewardTheme(rewardThemes[Math.floor(Math.random() * rewardThemes.length)]);
         setShowRewardAnimation(true);
       }
     }, 600);
-  }, [segIndex, segments.length]);
+  }, [segIndex, segments.length, letter]);
 
   const handleRestart = useCallback(() => {
+    segmentCoveragesRef.current = [];
     setSegIndex(0);
     setStates(segments.map((_, i) => (i === 0 ? "active" : "locked")));
     setAllDone(false);
@@ -453,6 +482,7 @@ function TraceLetter({
   }, [segments]);
 
   useEffect(() => {
+    segmentCoveragesRef.current = [];
     setSegIndex(0);
     setStates(segments.map((_, i) => (i === 0 ? "active" : "locked")));
     setAllDone(false);
@@ -549,6 +579,7 @@ function TraceLetter({
         ) : !showRewardAnimation ? (
           <SuccessBadge onRestart={handleRestart} language={language} />
         ) : null}
+        {/* SegmentTracer passes real coverage ratio to goNext via onDone(coverage) */}
       </View>
     </>
   );
@@ -907,9 +938,10 @@ function SuccessBadge({ onRestart }: any) {
 
 function SegmentTracer({ segment, onDone }: any) {
   const TOLERANCE = 35;
-  const BACK_SLACK = 10;
   const puckR = 18;
   const progressIndexRef = useRef(0);
+  // Track max progress reached to compute real coverage at completion
+  const maxProgressRef = useRef(0);
   const [offTrack, setOffTrack] = useState(false);
   const [rotation, setRotation] = useState(segment.pts[0]?.angle || 0);
   const puck = useRef(new Animated.ValueXY({ x: segment.pts[0].x, y: segment.pts[0].y })).current;
@@ -967,20 +999,26 @@ function SegmentTracer({ segment, onDone }: any) {
           }
           setOffTrack(false);
           const prev = progressIndexRef.current;
-          
-          // Loop-Closure Detection: If they are near the end of the tracing path, and the physical location snaps to the start point 
-          // (which happens on perfectly enclosed shapes like 'O' and 'Q'), mathematically lock the progress to 100% to trigger onDone!
+
+          // Loop-Closure Detection: enclosed shapes like 'O' and 'Q'
           if (prev > segment.pts.length - 30 && index < 20) {
               progressIndexRef.current = segment.pts.length - 1;
-          } 
-          // Otherwise apply standard progression with clamped backward delta to prevent slipping
-          else if (index <= prev + 40) {
+          } else if (index <= prev + 40) {
               progressIndexRef.current = Math.max(prev - 15, index);
+          }
+
+          // Track the furthest point reached for real accuracy measurement
+          if (progressIndexRef.current > maxProgressRef.current) {
+            maxProgressRef.current = progressIndexRef.current;
           }
 
           setPuckToIndex(progressIndexRef.current);
           if (progressIndexRef.current >= segment.pts.length - 2) {
-            setTimeout(onDone, 300);
+            // Coverage = fraction of path points reached
+            const coverage = segment.pts.length > 1
+              ? maxProgressRef.current / (segment.pts.length - 1)
+              : 1;
+            setTimeout(() => onDone(coverage), 300);
           }
         },
         onPanResponderRelease: () => {
